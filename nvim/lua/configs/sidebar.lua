@@ -1,0 +1,248 @@
+local M = {}
+
+M.LOGO = {
+  "  ███╗   ██╗██╗   ██╗██╗███╗   ███╗",
+  "  ████╗  ██║██║   ██║██║████╗ ████║",
+  "  ██╔██╗ ██║██║   ██║██║██╔████╔██║",
+  "  ██║╚██╗██║╚██╗ ██╔╝██║██║╚██╔╝██║",
+  "  ██║ ╚████║ ╚████╔╝ ██║██║ ╚═╝ ██║",
+  "  ╚═╝  ╚═══╝  ╚═══╝  ╚═╝╚═╝     ╚═╝",
+}
+
+-- Per-letter colour spans, as BYTE offsets (the art is multi-byte), one list
+-- per row. NvimLogo1..4 are defined in lua/chadrc.lua from espresso's palette.
+M.LOGO_HL = {
+  { { 2, 26, "NvimLogo1" }, { 26, 47, "NvimLogo2" }, { 47, 56, "NvimLogo3" }, { 56, 83, "NvimLogo4" } },
+  { { 2, 28, "NvimLogo1" }, { 28, 49, "NvimLogo2" }, { 49, 58, "NvimLogo3" }, { 58, 89, "NvimLogo4" } },
+  { { 2, 30, "NvimLogo1" }, { 30, 51, "NvimLogo2" }, { 51, 60, "NvimLogo3" }, { 60, 93, "NvimLogo4" } },
+  { { 2, 32, "NvimLogo1" }, { 32, 57, "NvimLogo2" }, { 57, 66, "NvimLogo3" }, { 66, 99, "NvimLogo4" } },
+  { { 2, 30, "NvimLogo1" }, { 30, 53, "NvimLogo2" }, { 53, 62, "NvimLogo3" }, { 62, 91, "NvimLogo4" } },
+  { { 2, 28, "NvimLogo1" }, { 28, 47, "NvimLogo2" }, { 47, 56, "NvimLogo3" }, { 56, 79, "NvimLogo4" } },
+}
+
+M.LOGO_FT = "nvimlogo"
+M.WIDTH = 38
+
+local ns = vim.api.nvim_create_namespace("nvimlogo")
+
+function M.open_logo()
+  local buf = vim.api.nvim_create_buf(false, true)
+  vim.bo[buf].buftype = "nofile"
+  vim.bo[buf].bufhidden = "wipe"
+  vim.bo[buf].swapfile = false
+  vim.api.nvim_buf_set_lines(buf, 0, -1, false, M.LOGO)
+  vim.bo[buf].modifiable = false
+  vim.bo[buf].filetype = M.LOGO_FT
+  for i, spans in ipairs(M.LOGO_HL) do
+    for _, sp in ipairs(spans) do
+      vim.api.nvim_buf_set_extmark(buf, ns, i - 1, sp[1], { end_col = sp[2], hl_group = sp[3] })
+    end
+  end
+  vim.cmd("topleft split")
+  vim.api.nvim_win_set_buf(0, buf)
+end
+
+-- `notify` is false when edgy calls this to restore a pinned view: opening a
+-- non-repo directory should not warn on every sidebar open.
+local function in_repo(notify)
+  if vim.fn.isdirectory ".git" == 1 or vim.fn.finddir(".git", ".;") ~= "" then
+    return true
+  end
+  if notify then
+    vim.notify("not inside a git repository", vim.log.levels.WARN)
+  end
+  return false
+end
+
+function M.graph(notify)
+  if not in_repo(notify) then
+    return
+  end
+  require("edgy").goto_main()
+  vim.cmd "split"
+  require("gitgraph").draw({}, { all = true, max_count = 500 })
+  M.graph_to_top()
+end
+
+local GRAPH_TOP_RETRIES = { 0, 60, 150, 350, 700, 1000 }
+
+function M.graph_to_top()
+  for _, delay in ipairs(GRAPH_TOP_RETRIES) do
+    vim.defer_fn(function()
+      for _, w in ipairs(vim.api.nvim_list_wins()) do
+        local b = vim.api.nvim_win_get_buf(w)
+        if vim.bo[b].filetype == "gitgraph" and vim.api.nvim_buf_line_count(b) > 0 then
+          vim.api.nvim_win_call(w, function()
+            vim.fn.winrestview { topline = 1, lnum = 1, col = 0, leftcol = 0 }
+          end)
+        end
+      end
+    end, delay)
+  end
+end
+
+local function ensure_main()
+  local edgy = require "edgy"
+  for _, w in ipairs(vim.api.nvim_list_wins()) do
+    if not edgy.get_win(w) then
+      return
+    end
+  end
+  vim.cmd "botright vsplit"
+  vim.cmd "enew"
+end
+
+function M.toggle()
+  local name = vim.api.nvim_buf_get_name(0)
+  if name ~= "" and vim.fn.isdirectory(name) == 1 then
+    vim.cmd "enew"
+  end
+  require("edgy").toggle "left"
+  -- Deferred, not scheduled: edgy has not finished claiming windows on the
+  -- next tick, so an immediate check still sees a "main" window and bails.
+  vim.defer_fn(ensure_main, 200)
+end
+
+function M.track_drags()
+  vim.api.nvim_create_autocmd("WinResized", {
+    group = vim.api.nvim_create_augroup("SidebarDrag", { clear = true }),
+    callback = function()
+      local ok, edgy = pcall(require, "edgy")
+      if not ok then
+        return
+      end
+      for _, w in ipairs(vim.v.event.windows or {}) do
+        if vim.api.nvim_win_is_valid(w) then
+          local ew = edgy.get_win(w)
+          -- Only vertical edgebars stack their views, so only they have a
+          -- meaningful per-panel height to pin.
+          if ew and ew.view and ew.view.edgebar and ew.view.edgebar.pos == "left" then
+            local actual = vim.api.nvim_win_get_height(w)
+            if actual > 0 and actual ~= ew.height then
+              vim.w[w].edgy_height = actual
+            end
+          end
+        end
+      end
+    end,
+  })
+end
+
+---@return boolean
+local function startup_ok()
+  -- diff mode (nvim -d, git difftool)
+  if vim.o.diff then
+    return false
+  end
+  -- git commit / rebase buffers
+  local ft = vim.bo.filetype
+  if ft == "gitcommit" or ft == "gitrebase" then
+    return false
+  end
+  -- reading from stdin, e.g. `cat x | nvim -`
+  for _, a in ipairs(vim.fn.argv()) do
+    if a == "-" then
+      return false
+    end
+  end
+  return true
+end
+
+---@return boolean
+local function should_restore()
+  local argv = vim.fn.argv()
+  if #argv == 0 then
+    return true
+  end
+  return #argv == 1 and vim.fn.isdirectory(argv[1]) == 1
+end
+
+---@return string?
+local function last_file()
+  local cwd = vim.uv.cwd()
+  if not cwd then
+    return nil
+  end
+  cwd = cwd:gsub("/$", "") .. "/"
+  local state, data = vim.fn.stdpath "state", vim.fn.stdpath "data"
+  for _, f in ipairs(vim.v.oldfiles or {}) do
+    if vim.startswith(f, cwd)
+      and not vim.startswith(f, state)
+      and not vim.startswith(f, data)
+      and not f:find("/%.git/")
+      and vim.fn.filereadable(f) == 1
+    then
+      return f
+    end
+  end
+  return nil
+end
+
+function M.autostart()
+  vim.api.nvim_create_autocmd("VimEnter", {
+    group = vim.api.nvim_create_augroup("SidebarAutostart", { clear = true }),
+    nested = true,
+    callback = function()
+      if not startup_ok() then
+        return
+      end
+      -- Scheduled so it runs after lazy has finished its VimEnter work.
+      vim.schedule(function()
+        if should_restore() then
+          local f = last_file()
+          if f then
+            vim.cmd.edit(vim.fn.fnameescape(f))
+            -- '"' is the cursor position when the file was last closed; shada
+            -- has been read by now, so the mark is available.
+            local mark = vim.api.nvim_buf_get_mark(0, '"')
+            if mark[1] > 0 and mark[1] <= vim.api.nvim_buf_line_count(0) then
+              pcall(vim.api.nvim_win_set_cursor, 0, mark)
+              vim.cmd "normal! zz"
+            end
+          end
+        end
+        M.toggle()
+      end)
+    end,
+  })
+end
+
+function M.track_graph_top()
+  vim.api.nvim_create_autocmd({ "BufWinEnter", "FileType" }, {
+    group = vim.api.nvim_create_augroup("SidebarGraphTop", { clear = true }),
+    pattern = "*",
+    callback = function(ev)
+      if vim.bo[ev.buf].filetype == "gitgraph" then
+        M.graph_to_top()
+      end
+    end,
+  })
+end
+
+---@param cmd string
+function M.main_do(cmd)
+  pcall(function()
+    require("edgy").goto_main()
+  end)
+  vim.cmd(cmd)
+end
+
+function M.track_graph_keys()
+  vim.api.nvim_create_autocmd("FileType", {
+    group = vim.api.nvim_create_augroup("SidebarGraphKeys", { clear = true }),
+    pattern = "gitgraph",
+    callback = function(ev)
+      local function nm(lhs, rhs, desc)
+        vim.keymap.set("n", lhs, rhs, { buffer = ev.buf, desc = desc, nowait = true })
+      end
+      nm("<S-Right>", "zL", "graph: scroll right")
+      nm("<S-Left>", "zH", "graph: scroll left")
+      nm("<ScrollWheelRight>", "zl", "graph: scroll right")
+      nm("<ScrollWheelLeft>", "zh", "graph: scroll left")
+      nm("<Home>", "zH", "graph: scroll to start")
+      vim.wo[vim.fn.bufwinid(ev.buf)].wrap = false
+    end,
+  })
+end
+
+return M
