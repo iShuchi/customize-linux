@@ -25,6 +25,7 @@ return {
       vim.opt.laststatus = 3
       vim.opt.splitkeep = "screen"
       sidebar.track_drags()
+      sidebar.track_logo()
       sidebar.autostart()
       sidebar.track_graph_top()
       sidebar.track_graph_keys()

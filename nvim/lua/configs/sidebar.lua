@@ -21,25 +21,60 @@ M.LOGO_HL = {
 }
 
 M.LOGO_FT = "nvimlogo"
-M.WIDTH = 38
+M.WIDTH = 0.25
 
 local ns = vim.api.nvim_create_namespace("nvimlogo")
+local LOGO_INDENT = 2
+local LOGO_COLS = vim.fn.strdisplaywidth(M.LOGO[1]) - LOGO_INDENT
+
+---@param buf integer
+---@param win integer
+local function draw_logo(buf, win)
+  if not (vim.api.nvim_buf_is_valid(buf) and vim.api.nvim_win_is_valid(win)) then
+    return
+  end
+  local pad = math.max(math.floor((vim.api.nvim_win_get_width(win) - LOGO_COLS) / 2), 0)
+  local lines = {}
+  for i, row in ipairs(M.LOGO) do
+    lines[i] = string.rep(" ", pad) .. row:sub(LOGO_INDENT + 1)
+  end
+  vim.bo[buf].modifiable = true
+  vim.api.nvim_buf_set_lines(buf, 0, -1, false, lines)
+  vim.bo[buf].modifiable = false
+  vim.api.nvim_buf_clear_namespace(buf, ns, 0, -1)
+  local shift = pad - LOGO_INDENT
+  for i, spans in ipairs(M.LOGO_HL) do
+    for _, sp in ipairs(spans) do
+      vim.api.nvim_buf_set_extmark(buf, ns, i - 1, sp[1] + shift, { end_col = sp[2] + shift, hl_group = sp[3] })
+    end
+  end
+end
 
 function M.open_logo()
   local buf = vim.api.nvim_create_buf(false, true)
   vim.bo[buf].buftype = "nofile"
   vim.bo[buf].bufhidden = "wipe"
   vim.bo[buf].swapfile = false
-  vim.api.nvim_buf_set_lines(buf, 0, -1, false, M.LOGO)
-  vim.bo[buf].modifiable = false
   vim.bo[buf].filetype = M.LOGO_FT
-  for i, spans in ipairs(M.LOGO_HL) do
-    for _, sp in ipairs(spans) do
-      vim.api.nvim_buf_set_extmark(buf, ns, i - 1, sp[1], { end_col = sp[2], hl_group = sp[3] })
-    end
-  end
   vim.cmd("topleft split")
   vim.api.nvim_win_set_buf(0, buf)
+  local win = vim.api.nvim_get_current_win()
+  draw_logo(buf, win)
+  vim.defer_fn(function() draw_logo(buf, win) end, 200)
+end
+
+function M.track_logo()
+  vim.api.nvim_create_autocmd({ "WinResized", "VimResized", "BufWinEnter" }, {
+    group = vim.api.nvim_create_augroup("SidebarLogoCenter", { clear = true }),
+    callback = function()
+      for _, w in ipairs(vim.api.nvim_list_wins()) do
+        local b = vim.api.nvim_win_get_buf(w)
+        if vim.bo[b].filetype == M.LOGO_FT then
+          draw_logo(b, w)
+        end
+      end
+    end,
+  })
 end
 
 -- `notify` is false when edgy calls this to restore a pinned view: opening a
