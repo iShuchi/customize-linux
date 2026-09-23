@@ -26,4 +26,4 @@ Each setup script takes a mode:
 
 Here is how it looks so far :-)
 
-<img width="1903" height="1026" alt="Screenshot from 2026-09-23 15-24-00" src="https://github.com/user-attachments/assets/1b7b91c1-c8ca-48fd-8433-1cd8e15a37a6" />
+![NVIM Interface](images/NVIM.png)
