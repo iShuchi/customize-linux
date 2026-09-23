@@ -30,6 +30,7 @@ M.base46 = {
 		NvimLogo2 = { fg = "teal" }, -- V  #51decf
 		NvimLogo3 = { fg = "blue" }, -- I  #76bef9
 		NvimLogo4 = { fg = "purple" }, -- M  #c993ef
+		MarkdownRuler = { bg = "#4a3010" },
 	},
 }
 

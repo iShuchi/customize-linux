@@ -23,6 +23,7 @@ end
 
 map({ "n", "i", "v" }, "<C-S-i>", format_and_lint, { desc = "format + lint buffer" })
 map("n", "<leader>l", format_and_lint, { desc = "format + lint buffer" })
+map("n", "<leader>I", format_and_lint, { desc = "format + lint buffer" })
 
 -- VS Code style bindings.
 
