@@ -26,4 +26,4 @@ Each setup script takes a mode:
 
 Here is how it looks so far :-)
 
-<img width="1903" height="1026" alt="image" src="https://github.com/user-attachments/assets/62804fc0-bdb6-4865-9da7-efa9422d7f19" />
+<img width="1920" height="1080" alt="image" src="https://github.com/user-attachments/assets/03392c79-2f44-4d04-bd1d-290269c3d88d" />
