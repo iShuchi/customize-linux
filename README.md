@@ -25,3 +25,5 @@ Each setup script takes a mode:
 ### Display
 
 Here is how it looks so far :-)
+
+<img width="1903" height="1026" alt="image" src="https://github.com/user-attachments/assets/3bf536ab-9896-4520-b9ab-801fa00799c6" />
