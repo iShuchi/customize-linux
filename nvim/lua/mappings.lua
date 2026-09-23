@@ -44,8 +44,8 @@ end, { desc = "toggle left panel" })
 
 -- new file / new panes, always in the editor area
 map("n", "<leader>n", function()
-  sidebar.main_do "enew"
-end, { desc = "new file" })
+  require("configs.newfile").open()
+end, { desc = "new file in the tree's selected directory" })
 
 map("n", "<leader>V", function()
   sidebar.main_do "vsplit"
