@@ -1,4 +1,4 @@
--- <leader>+n -- create a file inside the directory selected in the file tree.
+-- create a file in the folder under the tree cursor.
 
 local M = {}
 
@@ -15,130 +15,66 @@ local function tree_win()
   return nil
 end
 
----@return string? directory under the tree cursor, nil when it is on a file
-local function selected_dir()
-  local ok, api = pcall(require, "nvim-tree.api")
-  if not ok then
-    return nil
-  end
-  local node = api.tree.get_node_under_cursor()
-  if not node or not node.absolute_path or node.absolute_path == "" then
-    return nil
-  end
-  if node.type == "directory" or vim.fn.isdirectory(node.absolute_path) == 1 then
-    return node.absolute_path
-  end
-  return nil
-end
-
 ---Path as it reads in the box title: relative to cwd, or the tail at the root.
 ---@param dir string
 ---@return string
 local function label(dir)
-  local rel = vim.fn.fnamemodify(dir, ":~:.")
+  local rel = vim.fn.fnamemodify(vim.fs.normalize(dir), ":~:.")
   if rel == "." or rel == "" then
-    rel = vim.fn.fnamemodify(dir, ":t")
+    rel = vim.fn.fnamemodify(vim.fs.normalize(dir), ":t")
   end
   return rel
 end
 
----Nothing usable under the cursor: put the cursor in the tree and say so.
----@param win integer
-local function ask_for_dir(win)
-  vim.api.nvim_set_current_win(win)
-  vim.notify("pick a directory in the tree, then press <leader>n again", vim.log.levels.INFO)
-end
+---@param win integer tree window
+---@param node table? nvim-tree node under the cursor
+---@return integer row, integer col, integer width
+local function anchor(win, node)
+  local lnum = vim.api.nvim_win_get_cursor(win)[1]
+  local line = vim.api.nvim_buf_get_lines(vim.api.nvim_win_get_buf(win), lnum - 1, lnum, false)[1] or ""
+  local win_w, win_h = vim.api.nvim_win_get_width(win), vim.api.nvim_win_get_height(win)
 
-local function reload_tree()
-  pcall(function()
-    require("nvim-tree.api").tree.reload()
-  end)
-end
-
----@param dir string directory the name is relative to
----@param name string what was typed into the box
-function M.create(dir, name)
-  if name == "" then
-    return -- empty box, treated as a cancel
-  end
-  
-  local dir_only = name:sub(-1) == "/"
-  local path = vim.fs.normalize(dir .. "/" .. name)
-
-  if vim.fn.fnamemodify(path, ":t") == "" then
-    vim.notify("new file: '" .. name .. "' has no filename in it", vim.log.levels.WARN)
-    return
-  end
-
-  if dir_only then
-    if vim.fn.isdirectory(path) == 0 and not pcall(vim.fn.mkdir, path, "p") then
-      vim.notify("new file: could not create " .. label(path), vim.log.levels.ERROR)
-      return
-    end
-    reload_tree()
-    vim.notify(label(path) .. "/ ready, press <leader>n on it to add a file", vim.log.levels.INFO)
-    return
-  end
-
-  if vim.fn.isdirectory(path) == 1 then
-    vim.notify("new file: " .. label(path) .. " is a directory", vim.log.levels.WARN)
-    return
-  end
-
-  -- A typed name may carry directories of its own ("configs/new.lua"), so the
-  -- parent chain is created before the file.
-  local parent = vim.fs.dirname(path)
-  if vim.fn.isdirectory(parent) == 0 then
-    local made = pcall(vim.fn.mkdir, parent, "p")
-    if not made then
-      vim.notify("new file: could not create " .. label(parent), vim.log.levels.ERROR)
-      return
+  local col = 0
+  local s = node and node.name and line:find(node.name, 1, true)
+  if s then
+    col = vim.fn.strdisplaywidth(line:sub(1, s - 1))
+    if node.type ~= "directory" then
+      col = col - 2
     end
   end
+  local width = math.max(win_w - col - 2, 16)
+  col = math.max(math.min(col, win_w - width - 2), 0)
 
-  local existed = vim.fn.filereadable(path) == 1
-  if not existed then
-    -- Touched on disk rather than left as an unwritten buffer, so the tree
-    -- lists it straight away instead of after the first :w.
-    local fd = io.open(path, "w")
-    if not fd then
-      vim.notify("new file: could not create " .. label(path), vim.log.levels.ERROR)
-      return
-    end
-    fd:close()
+  -- winline() is 1-based, so as a 0-based float row it is the line below the
+  -- cursor. Too close to the bottom, the box goes above the line instead.
+  local row = vim.api.nvim_win_call(win, vim.fn.winline)
+  if row + 3 > win_h then
+    row = math.max(row - 4, 0)
   end
-
-  -- goto_main() first, so the file never opens inside an edgy panel.
-  sidebar.main_do("edit " .. vim.fn.fnameescape(path))
-  reload_tree()
-
-  if existed then
-    vim.notify(label(path) .. " already existed, opened it", vim.log.levels.INFO)
-  end
+  return row, col, width
 end
 
----One-line box over the sidebar, asking for the name.
+---One-line box inside the tree, asking for the name.
 ---@param win integer tree window it is anchored to
----@param dir string directory the file goes in
-local function open_box(win, dir)
+---@param node table? node the box is placed under
+---@param dir string folder the name is relative to, with a trailing "/"
+---@param done fun(name: string?)
+local function name_box(win, node, dir, done)
   local buf = vim.api.nvim_create_buf(false, true)
-  vim.bo[buf].buftype = "nofile"
   vim.bo[buf].bufhidden = "wipe"
-  vim.bo[buf].swapfile = false
 
-  -- Anchored to the tree pane rather than centred over the editor: the
-  -- directory it is about is the one highlighted right behind the box.
-  local width = math.max(vim.api.nvim_win_get_width(win) - 4, 12)
+  local row, col, width = anchor(win, node)
   local title = " " .. label(dir) .. "/ "
   if vim.fn.strdisplaywidth(title) > width then
-    title = " …" .. vim.fn.strcharpart(label(dir), vim.fn.strchars(label(dir)) - width + 4) .. "/ "
+    local l = label(dir)
+    title = " …" .. vim.fn.strcharpart(l, vim.fn.strchars(l) - width + 5) .. "/ "
   end
 
   local box = vim.api.nvim_open_win(buf, true, {
     relative = "win",
     win = win,
-    row = 1,
-    col = 1,
+    row = row,
+    col = col,
     width = width,
     height = 1,
     style = "minimal",
@@ -146,30 +82,38 @@ local function open_box(win, dir)
     title = title,
     title_pos = "center",
   })
+  -- Drop the "pick a directory" hint from an earlier press.
+  vim.api.nvim_echo({}, false, {})
 
-  local function close()
+  local function finish(name)
     if vim.api.nvim_win_is_valid(box) then
       vim.api.nvim_win_close(box, true)
     end
-  end
-
-  local function cancel()
-    close()
     vim.cmd "stopinsert"
+    done(name)
   end
 
   local function confirm()
-    local typed = vim.api.nvim_buf_get_lines(buf, 0, 1, false)[1] or ""
-    close()
-    vim.cmd "stopinsert"
-    M.create(dir, vim.trim(typed))
+    finish(vim.trim(vim.api.nvim_buf_get_lines(buf, 0, 1, false)[1] or ""))
+  end
+
+  local function cancel()
+    finish(nil)
   end
 
   vim.keymap.set({ "i", "n" }, "<CR>", confirm, { buffer = buf, nowait = true, desc = "create the file" })
   vim.keymap.set({ "i", "n" }, "<Esc>", cancel, { buffer = buf, nowait = true, desc = "cancel" })
   vim.keymap.set({ "i", "n" }, "<C-c>", cancel, { buffer = buf, nowait = true, desc = "cancel" })
   -- Clicking away is a cancel too, otherwise the box outlives its window.
-  vim.api.nvim_create_autocmd("BufLeave", { buffer = buf, once = true, callback = close })
+  vim.api.nvim_create_autocmd("BufLeave", {
+    buffer = buf,
+    once = true,
+    callback = function()
+      if vim.api.nvim_win_is_valid(box) then
+        vim.api.nvim_win_close(box, true)
+      end
+    end,
+  })
 
   vim.cmd "startinsert"
 end
@@ -180,12 +124,13 @@ function M.open()
 
   if not win then
     -- No tree on screen. Open the sidebar and ask once edgy has drawn it --
-    -- the same wait M.toggle()'s own main-window guard uses.
+    -- the same wait sidebar.toggle()'s own main-window guard uses.
     sidebar.toggle()
     vim.defer_fn(function()
       local w = tree_win()
       if w then
-        ask_for_dir(w)
+        vim.api.nvim_set_current_win(w)
+        vim.notify("pick a directory in the tree, then press <leader>n again", vim.log.levels.INFO)
       else
         vim.notify("new file: could not open the file tree", vim.log.levels.WARN)
       end
@@ -193,13 +138,35 @@ function M.open()
     return
   end
 
-  local dir = selected_dir()
-  if not dir then
-    ask_for_dir(win)
-    return
+  local api = require "nvim-tree.api"
+  local node = api.tree.get_node_under_cursor()
+
+  -- api.fs.create asks through vim.ui.input, which would be a cmdline prompt.
+  -- For this one call it is the box instead. nvim-tree passes the target folder
+  -- as `default`, so only the name is typed.
+  local ui_input = vim.ui.input
+  vim.ui.input = function(opts, on_confirm)
+    vim.ui.input = ui_input
+    local dir = opts.default
+    name_box(win, node, dir, function(name)
+      if not name or name == "" then
+        return on_confirm(nil)
+      end
+      local path = dir .. name
+      on_confirm(path)
+      -- Opened whether it was just made or already there; a "dir/" entry is
+      -- not a readable file, so it only shows up in the tree.
+      if vim.fn.filereadable(path) == 1 then
+        sidebar.main_do("edit " .. vim.fn.fnameescape(path))
+      end
+    end)
   end
 
-  open_box(win, dir)
+  local ok, err = pcall(api.fs.create, node)
+  vim.ui.input = ui_input
+  if not ok then
+    vim.notify("new file: " .. tostring(err), vim.log.levels.ERROR)
+  end
 end
 
 return M

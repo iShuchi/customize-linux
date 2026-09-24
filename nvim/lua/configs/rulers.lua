@@ -1,4 +1,4 @@
--- Vertical ruler
+-- Vertical rulers
 
 local M = {}
 
@@ -13,24 +13,34 @@ M.columns = {
   markdown = 80, -- "[markdown]".editor.rulers
 }
 
+M.CHAR = "│"
+M.DEFAULT_HL = "VirtColumn"
 M.highlight = {
-  markdown = "ColorColumn:MarkdownRuler",
+  markdown = "MarkdownRuler",
 }
 
+local ns = vim.api.nvim_create_namespace "UserRulers"
+
 function M.setup()
-  vim.api.nvim_create_autocmd("FileType", {
-    group = vim.api.nvim_create_augroup("UserRulers", { clear = true }),
-    pattern = vim.tbl_keys(M.columns),
-    callback = function(ev)
-      local ft = vim.bo[ev.buf].filetype
+  vim.api.nvim_set_decoration_provider(ns, {
+    on_win = function(_, _, buf)
+      return M.columns[vim.bo[buf].filetype] ~= nil
+    end,
+    on_line = function(_, _, buf, row)
+      local ft = vim.bo[buf].filetype
       local col = M.columns[ft]
-      if not col then
+      local line = vim.api.nvim_buf_get_lines(buf, row, row + 1, false)[1]
+      if not line then
         return
       end
-      vim.opt_local.colorcolumn = tostring(col)
-      if M.highlight[ft] then
-        vim.opt_local.winhighlight:append(M.highlight[ft])
+      if vim.fn.strdisplaywidth(line) >= col then
+        return
       end
+      vim.api.nvim_buf_set_extmark(buf, ns, row, 0, {
+        virt_text = { { M.CHAR, M.highlight[ft] or M.DEFAULT_HL } },
+        virt_text_win_col = col - 1,
+        ephemeral = true,
+      })
     end,
   })
 end

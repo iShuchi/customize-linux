@@ -30,7 +30,8 @@ M.base46 = {
 		NvimLogo2 = { fg = "teal" }, -- V  #51decf
 		NvimLogo3 = { fg = "blue" }, -- I  #76bef9
 		NvimLogo4 = { fg = "purple" }, -- M  #c993ef
-		MarkdownRuler = { bg = "#4a3010" },
+		VirtColumn = { fg = "grey" }, -- VS Code #80808075 -> espresso #424242
+		MarkdownRuler = { fg = "#ff9900" }, -- "[markdown]".editor.rulers[0].color
 	},
 }
 

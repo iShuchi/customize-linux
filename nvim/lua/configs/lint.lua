@@ -12,36 +12,12 @@ M.linters_by_ft = {
   lua = { "luacheck" },
 }
 
--- Only run linters whose executable is actually installed, otherwise nvim-lint
--- raises a notification on every lint for every tool you happen not to have.
-local function runnable_for(ft)
-  local lint = require "lint"
-  local runnable = {}
-
-  for _, name in ipairs(M.linters_by_ft[ft] or {}) do
-    local linter = lint.linters[name]
-    local cmd = type(linter) == "table" and linter.cmd or name
-    if type(cmd) == "function" then
-      cmd = cmd()
-    end
-    if vim.fn.executable(cmd) == 1 then
-      table.insert(runnable, name)
-    end
-  end
-
-  return runnable
-end
-
 function M.lint()
   local ok, lint = pcall(require, "lint")
   if not ok then
     return
   end
-
-  local runnable = runnable_for(vim.bo.filetype)
-  if #runnable > 0 then
-    lint.try_lint(runnable)
-  end
+  lint.try_lint(nil, { ignore_errors = true })
 end
 
 function M.setup()

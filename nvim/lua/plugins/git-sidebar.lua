@@ -40,8 +40,6 @@ return {
       wo = { signcolumn = "no" },
       options = { left = { size = sidebar.WIDTH } },
       left = {
-        -- Banner. Fixed height, no winbar -- it IS the header. The panels
-        -- below use fractions that leave room for it.
         {
           ft = sidebar.LOGO_FT,
           title = "",
@@ -53,7 +51,6 @@ return {
         {
           ft = "NvimTree",
           title = "Explorer",
-          size = { height = 0.38 },
           pinned = true,
           open = "NvimTreeOpen",
         },
