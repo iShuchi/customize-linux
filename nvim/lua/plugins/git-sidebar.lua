@@ -32,7 +32,6 @@ return {
     keys = {
       { "<leader>gs", "<cmd>Git<cr>", desc = "git status (fugitive)" },
       { "<leader>gl", function() sidebar.graph(true) end, desc = "git graph panel" },
-      { "<leader>ge", sidebar.toggle, desc = "toggle left sidebar" },
     },
     opts = {
       animate = { enabled = false },
