@@ -14,7 +14,7 @@
   copy = <Primary>c
   paste = <Primary>v
   close_window = <Primary>x
-  toggle_zoom = <Primary>z
+  toggle_zoom = <Primary><Shift>z
 [profiles]
   [[default]]
     cursor_color = "#aaaaaa"
