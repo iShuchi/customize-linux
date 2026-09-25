@@ -126,8 +126,6 @@
   // ─────────────────────────────────────────────────────────────
   //  Editor / workbench preferences
   // ─────────────────────────────────────────────────────────────
-  "editor.fontFamily": "Cascadia Code Nerd Font, Cascadia Code, Consolas, 'Courier New', monospace",
-  "editor.fontLigatures": true,
   "editor.lineNumbers": "on",
   "editor.minimap.enabled": false,
   "breadcrumbs.enabled": true,
