@@ -1,31 +1,67 @@
 local M = {}
 
-M.LOGO = {
-  "  ███╗   ██╗██╗   ██╗██╗███╗   ███╗",
-  "  ████╗  ██║██║   ██║██║████╗ ████║",
-  "  ██╔██╗ ██║██║   ██║██║██╔████╔██║",
-  "  ██║╚██╗██║╚██╗ ██╔╝██║██║╚██╔╝██║",
-  "  ██║ ╚████║ ╚████╔╝ ██║██║ ╚═╝ ██║",
-  "  ╚═╝  ╚═══╝  ╚═══╝  ╚═╝╚═╝     ╚═╝",
+-- The NVIM logo at four sizes, largest first; the sidebar shows the biggest
+-- one that fits its width. Each size lists its four letters as equal-width
+-- rows, so every letter gets its own colour: NvimLogo1..4, defined in
+-- lua/chadrc.lua from espresso's palette.
+local LOGOS = {
+  {
+    gap = 0,
+    letters = {
+      { "███╗   ██╗", "████╗  ██║", "██╔██╗ ██║", "██║╚██╗██║", "██║ ╚████║", "╚═╝  ╚═══╝" },
+      { "██╗   ██╗", "██║   ██║", "██║   ██║", "╚██╗ ██╔╝", " ╚████╔╝ ", "  ╚═══╝  " },
+      { "██╗", "██║", "██║", "██║", "██║", "╚═╝" },
+      { "███╗   ███╗", "████╗ ████║", "██╔████╔██║", "██║╚██╔╝██║", "██║ ╚═╝ ██║", "╚═╝     ╚═╝" },
+    },
+  },
+  {
+    gap = 1,
+    letters = {
+      { "█▄  █", "█ █ █", "█  ▀█" },
+      { "█   █", "▀▄ ▄▀", "  ▀  " },
+      { "█", "█", "█" },
+      { "█▄ ▄█", "█ ▀ █", "█   █" },
+    },
+  },
+  {
+    gap = 1,
+    letters = {
+      { "█▄ █", "█ ▀█" },
+      { "█ █", "▀▄▀" },
+      { "█", "█" },
+      { "█▀▄▀█", "█ ▀ █" },
+    },
+  },
+  { gap = 1, letters = { { "N" }, { "V" }, { "I" }, { "M" } } },
 }
 
--- Per-letter colour spans, as BYTE offsets (the art is multi-byte), one list
--- per row. NvimLogo1..4 are defined in lua/chadrc.lua from espresso's palette.
-M.LOGO_HL = {
-  { { 2, 26, "NvimLogo1" }, { 26, 47, "NvimLogo2" }, { 47, 56, "NvimLogo3" }, { 56, 83, "NvimLogo4" } },
-  { { 2, 28, "NvimLogo1" }, { 28, 49, "NvimLogo2" }, { 49, 58, "NvimLogo3" }, { 58, 89, "NvimLogo4" } },
-  { { 2, 30, "NvimLogo1" }, { 30, 51, "NvimLogo2" }, { 51, 60, "NvimLogo3" }, { 60, 93, "NvimLogo4" } },
-  { { 2, 32, "NvimLogo1" }, { 32, 57, "NvimLogo2" }, { 57, 66, "NvimLogo3" }, { 66, 99, "NvimLogo4" } },
-  { { 2, 30, "NvimLogo1" }, { 30, 53, "NvimLogo2" }, { 53, 62, "NvimLogo3" }, { 62, 91, "NvimLogo4" } },
-  { { 2, 28, "NvimLogo1" }, { 28, 47, "NvimLogo2" }, { 47, 56, "NvimLogo3" }, { 56, 79, "NvimLogo4" } },
-}
+for _, logo in ipairs(LOGOS) do
+  logo.width = logo.gap * (#logo.letters - 1)
+  for _, letter in ipairs(logo.letters) do
+    logo.width = logo.width + vim.fn.strdisplaywidth(letter[1])
+  end
+end
 
 M.LOGO_FT = "nvimlogo"
 M.WIDTH = 0.25
 
 local ns = vim.api.nvim_create_namespace("nvimlogo")
-local LOGO_INDENT = 2
-local LOGO_COLS = vim.fn.strdisplaywidth(M.LOGO[1]) - LOGO_INDENT
+
+---@param width integer
+local function pick_logo(width)
+  for _, logo in ipairs(LOGOS) do
+    if logo.width <= width then
+      return logo
+    end
+  end
+  return LOGOS[#LOGOS]
+end
+
+-- Logo panel height, read by edgy: the logo plus two blank lines under it.
+-- Uses the sidebar's settled width so a slide doesn't flip between sizes.
+function M.logo_height()
+  return #pick_logo(math.floor(vim.o.columns * M.WIDTH)).letters[1] + 2
+end
 
 ---@param buf integer
 ---@param win integer
@@ -33,20 +69,29 @@ local function draw_logo(buf, win)
   if not (vim.api.nvim_buf_is_valid(buf) and vim.api.nvim_win_is_valid(win)) then
     return
   end
-  local pad = math.max(math.floor((vim.api.nvim_win_get_width(win) - LOGO_COLS) / 2), 0)
-  local lines = {}
-  for i, row in ipairs(M.LOGO) do
-    lines[i] = string.rep(" ", pad) .. row:sub(LOGO_INDENT + 1)
+  local width = vim.api.nvim_win_get_width(win)
+  local logo = pick_logo(width)
+  local indent = string.rep(" ", math.max(math.floor((width - logo.width) / 2), 0))
+  local gap = string.rep(" ", logo.gap)
+  local lines, marks = {}, {}
+  for r = 1, #logo.letters[1] do
+    local line = indent
+    for i, letter in ipairs(logo.letters) do
+      if i > 1 then
+        line = line .. gap
+      end
+      -- byte offsets: the block characters are multi-byte
+      marks[#marks + 1] = { r - 1, #line, #line + #letter[r], "NvimLogo" .. i }
+      line = line .. letter[r]
+    end
+    lines[r] = line
   end
   vim.bo[buf].modifiable = true
   vim.api.nvim_buf_set_lines(buf, 0, -1, false, lines)
   vim.bo[buf].modifiable = false
   vim.api.nvim_buf_clear_namespace(buf, ns, 0, -1)
-  local shift = pad - LOGO_INDENT
-  for i, spans in ipairs(M.LOGO_HL) do
-    for _, sp in ipairs(spans) do
-      vim.api.nvim_buf_set_extmark(buf, ns, i - 1, sp[1] + shift, { end_col = sp[2] + shift, hl_group = sp[3] })
-    end
+  for _, m in ipairs(marks) do
+    vim.api.nvim_buf_set_extmark(buf, ns, m[1], m[2], { end_col = m[3], hl_group = m[4] })
   end
 end
 
