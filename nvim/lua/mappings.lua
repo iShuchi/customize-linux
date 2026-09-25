@@ -118,6 +118,7 @@ end, { desc = "sidebar new file in the tree's selected directory" })
 
 -- this list
 map("n", "<leader>ch", "<cmd>NvCheatsheet<cr>", { desc = "help show keybindings" })
+map("n", "<leader>th", function() require("nvchad.themes").open() end, { desc = "help pick a theme" })
 
 -- The cheatsheet shows keys the way Neovim stores them.
 local MODIFIERS = { C = "Ctrl+", M = "Alt+", A = "Alt+", S = "Shift+" }
