@@ -19,12 +19,16 @@
   [[default]]
     cursor_color = "#aaaaaa"
     show_titlebar = False
+    use_system_font = False
+    font = JetBrainsMono Nerd Font 11
   [[Bright Lights]]
     background_color = "#191919"
     cursor_color = "#f34b00"
     cursor_color_fg = False
     foreground_color = "#b3c9d7"
     show_titlebar = False
+    use_system_font = False
+    font = JetBrainsMono Nerd Font 11
     palette = "#191919:#ff355b:#b7e876:#ffc251:#76d4ff:#ba76e7:#6cbfb5:#c2c8d7:#191919:#ff355b:#b7e876:#ffc251:#76d5ff:#ba76e7:#6cbfb5:#c2c8d7"
 [layouts]
   [[default]]
