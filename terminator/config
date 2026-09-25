@@ -3,6 +3,7 @@
   inactive_color_offset = 0.8008565310492506
   enabled_plugins = LaunchpadBugURLHandler, LaunchpadCodeURLHandler, APTURLHandler, TerminatorThemes
   suppress_multiple_term_dialog = True
+  always_split_with_profile = True
   title_use_system_font = False
   title_font = JetBrainsMonoNL Nerd Font Mono Medium 9
   clear_select_on_copy = True
