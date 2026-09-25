@@ -113,7 +113,6 @@ EXTENSIONS=(
     ms-vscode.cpptools-extension-pack
     ms-vscode.cpptools-themes
     ms-vscode.remote-explorer
-    openai.chatgpt
     redhat.vscode-xml
     redhat.vscode-yaml
     smilerobotics.urdf

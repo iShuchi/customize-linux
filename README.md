@@ -17,7 +17,7 @@ for programming without touching your mouse.
 
 **NOTE:** `<leader>` is `Space`.
 
-I've choosen to not go with NvChad's keybindings and rather use the ones which
+I've chosen to not go with NvChad's keybindings and rather use the ones which
 I've made being inspired from VS Code keybindings. Use `<leader>+ch` to see
 complete set of keybindings.
 
@@ -31,3 +31,14 @@ Here is how it looks so far :-)
 
 A terminal with the Bright Lights theme is installed under this setup. The
 config and the TerminatorThemes plugin live in `terminator/`.
+
+## ZSH
+
+Replaces bash with zsh, starting from installation to complete configuration
+setup, this creates a smooth working environment on any terminal/terminator.
+
+## VS CODE
+
+VS Code is installed from Microsoft's apt repository along with the extensions,
+and the formatters that the settings point at. The settings, keybindings and
+`argv.json` live in `vscode/` and are copied into`~/.config/Code/User`.
