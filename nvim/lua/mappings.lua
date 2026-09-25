@@ -34,6 +34,7 @@ local sidebar = require "configs.sidebar"
 for _, lhs in ipairs {
   "<C-n>", "<leader>ff", "<leader>fw", "<leader>fz", "<leader>fm",
   "<leader>fb", "<leader>fh", "<leader>fo", "<leader>fa", "<leader>h", "<leader>v",
+  "<leader>wK", "<leader>wk", -- which-key is disabled
 } do
   pcall(vim.keymap.del, "n", lhs)
 end

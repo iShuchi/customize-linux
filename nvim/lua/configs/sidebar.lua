@@ -127,15 +127,137 @@ local function ensure_main()
   vim.cmd "enew"
 end
 
+---@return integer[]
+local function main_columns()
+  local edgy = require "edgy"
+  local layout = vim.fn.winlayout()
+  local nodes = layout[1] == "row" and layout[2] or { layout }
+  local wins = {}
+  for _, node in ipairs(nodes) do
+    while node[1] ~= "leaf" do
+      node = node[2][1]
+    end
+    if not edgy.get_win(node[2]) then
+      table.insert(wins, node[2])
+    end
+  end
+  return wins
+end
+
+local SLIDE_MS, SLIDE_FRAMES = 150, 10
+local slide_width ---@type integer?
+local sliding = false
+
+-- edgy reads the sidebar width through this on every resize, so during a
+-- slide it follows the animation instead of snapping back to M.WIDTH.
+function M.width()
+  return slide_width or M.WIDTH
+end
+
+---@return integer?
+local function sidebar_win()
+  local edgy = require "edgy"
+  for _, w in ipairs(vim.api.nvim_tabpage_list_wins(0)) do
+    local ew = edgy.get_win(w)
+    if ew and ew.view.edgebar.pos == "left" then
+      return w
+    end
+  end
+end
+
+---@param cols integer[]
+---@return number[]
+local function ratios_of(cols)
+  local widths, total = {}, 0
+  for i, w in ipairs(cols) do
+    widths[i] = vim.api.nvim_win_get_width(w)
+    total = total + widths[i]
+  end
+  for i = 1, #widths do
+    widths[i] = widths[i] / total
+  end
+  return widths
+end
+
+-- Left to right: each resize trades space with the columns to its right, and
+-- the last column takes whatever is left.
+---@param cols integer[]
+---@param ratios number[]
+local function set_ratios(cols, ratios)
+  local total = 0
+  for _, w in ipairs(cols) do
+    if not vim.api.nvim_win_is_valid(w) then
+      return
+    end
+    total = total + vim.api.nvim_win_get_width(w)
+  end
+  for i = 1, #cols - 1 do
+    vim.api.nvim_win_set_width(cols[i], math.floor(ratios[i] * total + 0.5))
+  end
+end
+
+-- Slides the sidebar between two widths (ease-out), holding the editor
+-- columns at their ratios on every frame.
+local function slide(from, to, cols, ratios, done)
+  local frame = 0
+  local function step()
+    frame = frame + 1
+    local t = 1 - (1 - frame / SLIDE_FRAMES) ^ 3
+    slide_width = math.max(math.floor(from + (to - from) * t + 0.5), 1)
+    local sw = sidebar_win()
+    if sw then
+      vim.api.nvim_win_set_width(sw, slide_width)
+    end
+    set_ratios(cols, ratios)
+    if frame < SLIDE_FRAMES then
+      vim.defer_fn(step, SLIDE_MS / SLIDE_FRAMES)
+    else
+      done()
+    end
+  end
+  step()
+end
+
 function M.toggle()
+  if sliding then
+    return
+  end
   local name = vim.api.nvim_buf_get_name(0)
   if name ~= "" and vim.fn.isdirectory(name) == 1 then
     vim.cmd "enew"
   end
-  require("edgy").toggle "left"
-  -- Deferred, not scheduled: edgy has not finished claiming windows on the
-  -- next tick, so an immediate check still sees a "main" window and bails.
-  vim.defer_fn(ensure_main, 200)
+
+  -- Without this, Neovim takes (or gives back) the sidebar's whole width
+  -- from the leftmost editor column only.
+  local cols = main_columns()
+  local ratios = ratios_of(cols)
+  local edgy = require "edgy"
+  local function finish()
+    slide_width = nil
+    sliding = false
+    -- Deferred, not scheduled: edgy has not finished claiming windows on the
+    -- next tick, so an immediate check still sees a "main" window and bails.
+    vim.defer_fn(ensure_main, 200)
+  end
+
+  sliding = true
+  local sw = sidebar_win()
+  if sw then
+    slide(vim.api.nvim_win_get_width(sw), 1, cols, ratios, function()
+      edgy.close "left"
+      vim.schedule(function()
+        set_ratios(cols, ratios)
+        finish()
+      end)
+    end)
+  else
+    slide_width = 1
+    edgy.open "left"
+    -- edgy creates the sidebar windows on the next tick.
+    vim.schedule(function()
+      slide(1, math.max(math.floor(vim.o.columns * M.WIDTH), 1), cols, ratios, finish)
+    end)
+  end
 end
 
 function M.track_drags()

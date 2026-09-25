@@ -38,7 +38,7 @@ return {
     opts = {
       animate = { enabled = false },
       wo = { signcolumn = "no" },
-      options = { left = { size = sidebar.WIDTH } },
+      options = { left = { size = sidebar.width } },
       left = {
         {
           ft = sidebar.LOGO_FT,
