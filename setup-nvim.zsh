@@ -286,6 +286,10 @@ for linter in shellcheck ruff clang-tidy luacheck; do
     command -v "${linter}" >/dev/null 2>&1 || warn "linter '${linter}' not installed, it will be skipped until you add it"
 done
 
+for tool in fzf rg; do
+    command -v "${tool}" >/dev/null 2>&1 || warn "'${tool}' not installed, fuzzy finding (fzf-lua) needs it"
+done
+
 # ------------------------- bootstrap plugins ----------------------------------
 info "Bootstrapping plugins (headless)"
 nvim --headless -c 'lua require("lazy").install({ wait = true, show = false })' -c 'qa!' 2>/dev/null \

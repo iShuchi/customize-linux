@@ -254,12 +254,16 @@ function M.track_graph_top()
   })
 end
 
----@param cmd string
+---@param cmd string|function
 function M.main_do(cmd)
   pcall(function()
     require("edgy").goto_main()
   end)
-  vim.cmd(cmd)
+  if type(cmd) == "function" then
+    cmd()
+  else
+    vim.cmd(cmd)
+  end
 end
 
 function M.track_graph_keys()
