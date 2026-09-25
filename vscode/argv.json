@@ -1,0 +1,8 @@
+// This configuration file allows you to pass permanent command line arguments to VS Code.
+// Only a subset of arguments is currently supported to reduce the likelihood of breaking
+// the installation.
+{
+  // Fall back to software (SwiftShader) WebGL when hardware GL initialization fails,
+  // instead of leaving WebGL-based webviews (e.g. URDF Visualizer) as a black canvas.
+  "enable-unsafe-swiftshader": true
+}

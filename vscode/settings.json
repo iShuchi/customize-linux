@@ -1,0 +1,186 @@
+{
+  // ─────────────────────────────────────────────────────────────
+  //  Global formatting / linting
+  // ─────────────────────────────────────────────────────────────
+  "editor.formatOnSave": true,
+  "editor.formatOnSaveMode": "file",
+  "editor.formatOnPaste": true,
+  "editor.formatOnType": true,
+  "files.trimTrailingWhitespace": true,
+  "files.insertFinalNewline": true,
+  "files.trimFinalNewlines": true,
+  "diffEditor.ignoreTrimWhitespace": false,
+  // ─────────────────────────────────────────────────────────────
+  //  C / C++  — clang-format, driven by each repo's .clang-format
+  // ─────────────────────────────────────────────────────────────
+  "[cpp]": {
+    "editor.defaultFormatter": "ms-vscode.cpptools",
+    "editor.formatOnSave": true,
+    "editor.formatOnSaveMode": "file",
+    "editor.formatOnType": true,
+    "editor.formatOnPaste": true,
+    "editor.rulers": [
+      {
+        "column": 80,
+        "color": "#80808075",
+      },
+    ],
+  },
+  "[c]": {
+    "editor.defaultFormatter": "ms-vscode.cpptools",
+    "editor.formatOnSave": true,
+    "editor.formatOnSaveMode": "file",
+    "editor.formatOnType": true,
+    "editor.formatOnPaste": true,
+    "editor.rulers": [
+      {
+        "column": 80,
+        "color": "#80808075",
+      },
+    ],
+  },
+  "C_Cpp.formatting": "clangFormat",
+  "C_Cpp.clang_format_path": "__HOME__/.local/bin/clang-format",
+  "C_Cpp.clang_format_style": "file",
+  "C_Cpp.clang_format_fallbackStyle": "Google",
+  "C_Cpp.default.cppStandard": "c++17",
+  "C_Cpp.default.cStandard": "c17",
+  "C_Cpp.errorSquiggles": "disabled",
+  "C_Cpp.codeAnalysis.clangTidy.enabled": true,
+  "C_Cpp.codeAnalysis.runAutomatically": true,
+  // ─────────────────────────────────────────────────────────────
+  //  Python — black (format) + ruff (lint & import sort)
+  // ─────────────────────────────────────────────────────────────
+  "[python]": {
+    "editor.defaultFormatter": "ms-python.black-formatter",
+    "editor.formatOnSave": true,
+    "editor.formatOnSaveMode": "file",
+    "editor.formatOnType": true,
+    "editor.formatOnPaste": true,
+    "editor.codeActionsOnSave": {
+      "source.organizeImports.ruff": "explicit",
+      "source.fixAll.ruff": "explicit",
+    },
+    "editor.rulers": [
+      {
+        "column": 88,
+        "color": "#80808075",
+      },
+    ],
+  },
+  "python.defaultInterpreterPath": "/bin/python3",
+  "python.languageServer": "Pylance",
+  "black-formatter.args": ["--line-length=88"],
+  "black-formatter.path": ["__HOME__/.local/bin/black"],
+  "ruff.path": ["__HOME__/.local/bin/ruff"],
+  "ruff.lint.enable": true,
+  "ruff.organizeImports": true,
+  // ─────────────────────────────────────────────────────────────
+  //  Shell / YAML / XML / Markdown
+  // ─────────────────────────────────────────────────────────────
+  "[shellscript]": {
+    "editor.formatOnSave": true,
+    "editor.formatOnSaveMode": "file",
+    "editor.formatOnType": true,
+    "editor.formatOnPaste": true,
+    "editor.rulers": [
+      {
+        "column": 80,
+        "color": "#80808075",
+      },
+    ],
+  },
+  "[yaml]": {
+    "editor.formatOnSave": true,
+    "editor.formatOnSaveMode": "file",
+    "editor.formatOnType": true,
+    "editor.formatOnPaste": true,
+    "editor.tabSize": 2,
+    "editor.rulers": [
+      {
+        "column": 80,
+        "color": "#80808075",
+      },
+    ],
+    "editor.defaultFormatter": "esbenp.prettier-vscode",
+  },
+  "prettier.proseWrap": "always",
+  "prettier.printWidth": 80,
+  "[xml]": {
+    "editor.defaultFormatter": "redhat.vscode-xml",
+    "editor.formatOnSave": true,
+  },
+  "[markdown]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode",
+    "editor.formatOnSave": true,
+    "editor.formatOnSaveMode": "file",
+    "editor.formatOnType": true,
+    "editor.formatOnPaste": true,
+    "editor.rulers": [
+      {
+        "column": 80,
+        "color": "#ff9900",
+      },
+    ],
+  },
+  // ─────────────────────────────────────────────────────────────
+  //  Editor / workbench preferences
+  // ─────────────────────────────────────────────────────────────
+  "editor.fontFamily": "Cascadia Code Nerd Font, Cascadia Code, Consolas, 'Courier New', monospace",
+  "editor.fontLigatures": true,
+  "editor.lineNumbers": "on",
+  "editor.minimap.enabled": false,
+  "breadcrumbs.enabled": true,
+  "files.autoSave": "afterDelay",
+  "workbench.colorTheme": "Atom One Dark",
+  "workbench.iconTheme": "helium-icon-theme",
+  "workbench.editor.enablePreview": false,
+  "workbench.editor.splitInGroupLayout": "vertical",
+  "window.titleBarStyle": "custom",
+  "explorer.confirmDelete": false,
+  "explorer.confirmDragAndDrop": false,
+  "security.workspace.trust.untrustedFiles": "open",
+  // ─────────────────────────────────────────────────────────────
+  //  Git / tooling
+  // ─────────────────────────────────────────────────────────────
+  "git.enableSmartCommit": true,
+  "git.suggestSmartCommit": false,
+  "git.autofetch": true,
+  "git.confirmSync": false,
+  "git.ignoreRebaseWarning": true,
+  "git.mergeEditor": true,
+  "merge-conflict.autoNavigateNextConflict.enabled": true,
+  "gitlens.home.preview.enabled": false,
+  "claudeCode.preferredLocation": "panel",
+  "cmake.pinnedCommands": [
+    "workbench.action.tasks.configureTaskRunner",
+    "workbench.action.tasks.runTask",
+  ],
+  "github.copilot.enable": {
+    "*": false,
+    "plaintext": false,
+    "markdown": false,
+    "scminput": false,
+  },
+  "yaml.disableSchemaDetection": [
+    "**/.github/workflows/*.yml",
+    "**/.github/workflows/*.yaml",
+    "**/.gitea/workflows/*.yml",
+    "**/.gitea/workflows/*.yaml",
+    "**/.forgejo/workflows/*.yml",
+    "**/.forgejo/workflows/*.yaml",
+  ],
+  "terminal.integrated.initialHint": false,
+  "cSpell.userWords": [
+    "abopt",
+    "Burgard",
+    "costmap",
+    "DROS",
+    "keepout",
+    "localisation",
+    "rclcpp",
+    "stevemacenski",
+    "Thrun",
+  ],
+  "git.openRepositoryInParentFolders": "never",
+}

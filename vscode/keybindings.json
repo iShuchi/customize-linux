@@ -1,0 +1,9 @@
+// Place your key bindings in this file to override the defaults
+[
+  // Ctrl+Shift+Enter in the commit message box -> commit
+  {
+    "key": "ctrl+shift+enter",
+    "command": "scm.acceptInput",
+    "when": "scmRepository && !suggestWidgetVisible"
+  }
+]
