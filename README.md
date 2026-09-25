@@ -36,13 +36,11 @@ I've made being inspired from VS Code keybindings.
 
 Use `<leader>+ch` to see complete set of keybindings.
 
-![Cheatsheet](images/cheatsheet.png)
-
 ### 2. Display
 
 Here is how it looks so far :-)
 
-![NVIM Interface](images/NVIM.png)
+![NVIM Interface](images/demo-nvim.gif)
 
 ## TERMINATOR
 
