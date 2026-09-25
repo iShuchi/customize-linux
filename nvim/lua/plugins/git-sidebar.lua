@@ -43,7 +43,7 @@ return {
         {
           ft = sidebar.LOGO_FT,
           title = "",
-          size = { height = #sidebar.LOGO },
+          size = { height = #sidebar.LOGO + 2 }, -- two blank lines under the logo
           pinned = true,
           open = sidebar.open_logo,
           wo = { winbar = "", cursorline = false, number = false, relativenumber = false },
