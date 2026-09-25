@@ -6,7 +6,7 @@
 local M = {}
 
 M.base46 = {
-	theme = "espresso",
+	theme = "decay",
 
 	-- Make the tree's indent guides and selected line visible
 	hl_override = {
