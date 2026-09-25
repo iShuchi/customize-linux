@@ -42,7 +42,10 @@ M.ui = {
 
 -- Keep <leader>ch to our own keys: hide Neovim's and nvim-tree's built-in ones
 M.cheatsheet = {
-	excluded_groups = { ":help", "Add", "Jump", "Opens", "Select", "Show", "Toggle", "nvim-tree:", "vim.snippet.jump" },
+	excluded_groups = {
+		"autopairs", "Nvim", "Opens", "terminal (t)", -- NvChad's own list
+		":help", "Add", "Jump", "Select", "Show", "Toggle", "nvim-tree:", "vim.snippet.jump",
+	},
 }
 
 -- M.nvdash = { load_on_startup = true }

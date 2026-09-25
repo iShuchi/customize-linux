@@ -56,10 +56,10 @@ map("n", "<C-z>", "u", { desc = "edit undo" })
 map("i", "<C-z>", "<C-o>u", { desc = "edit undo" })
 
 -- clipboard
-map("x", "<C-c>", '"+y', { desc = "edit copy selection" })
-map("n", "<C-c>", '"+yy', { desc = "edit copy line" })
+map("x", "<C-c>", '"+y', { desc = "edit copy" })
+map("n", "<C-c>", '"+yy', { desc = "edit copy" })
 map("n", "<C-v>", '"+p', { desc = "edit paste" })
-map("x", "<C-v>", '"+P', { desc = "edit paste over selection" })
+map("x", "<C-v>", '"+P', { desc = "edit paste" })
 map({ "i", "c" }, "<C-v>", "<C-r><C-o>+", { desc = "edit paste" })
 
 -- Esc leaves terminal mode too, so ":" works from anywhere. fzf-lua keeps its
@@ -118,3 +118,44 @@ end, { desc = "sidebar new file in the tree's selected directory" })
 
 -- this list
 map("n", "<leader>ch", "<cmd>NvCheatsheet<cr>", { desc = "help show keybindings" })
+
+-- The cheatsheet shows keys the way Neovim stores them.
+local MODIFIERS = { C = "Ctrl+", M = "Alt+", A = "Alt+", S = "Shift+" }
+
+local function readable(keys)
+  return (keys:gsub("<(.-)>", function(key)
+    if key == "leader" then
+      return nil -- nil keeps <leader> as it is
+    end
+    return (key:gsub("(%a)%-", MODIFIERS))
+  end))
+end
+
+-- NvChad makes one group per mode ("Edit", "Edit (i)", ...). Fold them into
+-- one group each, and list a key only once even if it works in several modes.
+local cheatsheet = require "nvchad.cheatsheet"
+local get_mappings = cheatsheet.get_mappings
+cheatsheet.get_mappings = function(mappings, groups)
+  get_mappings(mappings, groups)
+
+  local merged, seen = {}, {}
+  for heading, entries in pairs(groups) do
+    local name = heading:gsub(" %(%a%)$", "") -- "Edit (i)" -> "Edit"
+    merged[name] = merged[name] or {}
+    for _, entry in ipairs(entries) do -- entry is { description, keys }
+      local keys = readable(entry[2])
+      local id = name .. entry[1] .. keys
+      if not seen[id] then
+        seen[id] = true
+        table.insert(merged[name], { entry[1], keys })
+      end
+    end
+  end
+
+  for heading in pairs(groups) do
+    groups[heading] = nil
+  end
+  for name, entries in pairs(merged) do
+    groups[name] = entries
+  end
+end
