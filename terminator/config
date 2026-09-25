@@ -1,0 +1,37 @@
+[global_config]
+  tab_position = hidden
+  inactive_color_offset = 0.8008565310492506
+  enabled_plugins = LaunchpadBugURLHandler, LaunchpadCodeURLHandler, APTURLHandler, TerminatorThemes
+  suppress_multiple_term_dialog = True
+  title_use_system_font = False
+  title_font = JetBrainsMonoNL Nerd Font Mono Medium 9
+  clear_select_on_copy = True
+[keybindings]
+  split_horiz = <Primary><Shift>h
+  split_vert = <Primary><Shift>v
+  close_term = <Primary>q
+  copy = <Primary>c
+  paste = <Primary>v
+  close_window = <Primary>x
+  toggle_zoom = <Primary>z
+[profiles]
+  [[default]]
+    cursor_color = "#aaaaaa"
+    show_titlebar = False
+  [[Bright Lights]]
+    background_color = "#191919"
+    cursor_color = "#f34b00"
+    cursor_color_fg = False
+    foreground_color = "#b3c9d7"
+    show_titlebar = False
+    palette = "#191919:#ff355b:#b7e876:#ffc251:#76d4ff:#ba76e7:#6cbfb5:#c2c8d7:#191919:#ff355b:#b7e876:#ffc251:#76d5ff:#ba76e7:#6cbfb5:#c2c8d7"
+[layouts]
+  [[default]]
+    [[[window0]]]
+      type = Window
+      parent = ""
+    [[[child1]]]
+      type = Terminal
+      parent = window0
+      profile = Bright Lights
+[plugins]

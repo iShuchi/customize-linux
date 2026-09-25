@@ -59,3 +59,13 @@ Each setup script takes a mode:
 Here is how it looks so far :-)
 
 ![NVIM Interface](images/NVIM.png)
+
+## TERMINATOR
+
+A terminal with splits, opening in the Bright Lights theme. The config and the
+TerminatorThemes plugin live in `config-term/`.
+
+| Command | Utility |
+| --- | --- |
+| `./setup-term.sh` | Installs Terminator, pip, requests and the themes plugin, then copies the config. |
+| `./setup-term.sh -i` | Copies only changed files from `config-term/` into `~/.config/terminator`. |
