@@ -76,7 +76,8 @@ export VISUAL=code
 alias bs='colcon build && source install/setup.zsh'
 alias s='source install/setup.zsh'
 
-export PATH=$HOME/.local/bin:$PATH
+export PATH="$PATH:/opt/nvim-linux-x86_64/bin"
+export PATH="$HOME/.local/bin:$PATH"
 
 export NVM_DIR="$HOME/.nvm"
 [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
