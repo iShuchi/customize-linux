@@ -44,7 +44,7 @@ Each setup script takes a mode:
   <tr><td><code>&lt;leader&gt;x</code></td><td>Close tab <em>NvChad</em></td></tr>
   <tr><td><code>&lt;leader&gt;h</code> / <code>&lt;leader&gt;v</code></td><td>Split editor horizontally/vertically</td></tr>
   <tr><td><code>&lt;leader&gt;H</code> / <code>&lt;leader&gt;V</code></td><td>New terminal, horizontal/vertical</td></tr>
-  <tr><td><code>Alt+Shift+Arrow</code></td><td>Move between editor, terminal and sidebar</td></tr>
+  <tr><td><code>Alt+Shift+Arrow</code></td><td>Move between editor and terminal panes</code></td></tr>
   <tr><th colspan="2" align="center" style="text-align: center">Sidebar</th></tr>
   <tr><td><code>&lt;leader&gt;b</code></td><td>Show or hide the sidebar</td></tr>
   <tr><td><code>&lt;leader&gt;e</code></td><td>Jump to the file tree <em>NvChad</em></td></tr>

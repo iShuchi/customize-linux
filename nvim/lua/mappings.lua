@@ -84,10 +84,17 @@ map({ "i", "c" }, "<C-v>", "<C-r><C-o>+", { desc = "paste" })
 -- own buffer-local <Esc> to close the picker.
 map("t", "<Esc>", "<C-\\><C-n>", { desc = "terminal to normal mode" })
 
--- move between editor and terminal windows
+-- move between editor and terminal windows; the sidebar is reached only with
+-- <leader>e, so these never step into it
 for key, dir in pairs { Left = "h", Down = "j", Up = "k", Right = "l" } do
-  map("n", "<A-S-" .. key .. ">", "<C-w>" .. dir, { desc = "window " .. key:lower() })
-  map({ "i", "t" }, "<A-S-" .. key .. ">", "<C-\\><C-n><C-w>" .. dir, { desc = "window " .. key:lower() })
+  map({ "n", "i", "t" }, "<A-S-" .. key .. ">", function()
+    local target = vim.fn.win_getid(vim.fn.winnr(dir))
+    if target == vim.api.nvim_get_current_win() or require("edgy").get_win(target) then
+      return
+    end
+    vim.cmd "stopinsert" -- land in normal mode, as <C-w> would
+    vim.api.nvim_set_current_win(target)
+  end, { desc = "window " .. key:lower() })
 end
 
 -- sidebar
