@@ -16,8 +16,7 @@ set -uo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ZSH_CUSTOM="${ZSH_CUSTOM:-$HOME/.oh-my-zsh/custom}"
 
-say()  { echo "--> $*"; }
-warn() { echo "!!! $*" >&2; }
+source "$SCRIPT_DIR/lib/log.sh"
 
 usage() {
     cat <<'EOF'
@@ -50,90 +49,75 @@ done
 
 incremental() { [[ "$MODE" == "incremental" ]]; }
 
-echo "=== zsh environment setup starting ==="
-
 if incremental; then
-    say "Incremental:: skipping installs, syncing .zshrc only"
+    title "Update ZSH Setup"
     command -v zsh >/dev/null 2>&1 \
         || warn "zsh is not installed, run ./setup-zsh.sh without -i first"
+else
+    title "Full-Fledged ZSH Setup"
 fi
 
 if ! incremental; then
 
     # ------------------------------- Base packages --------------------------------
-
-    APT_PKGS=(zsh git curl wget bat sshpass xdg-utils nano python3-argcomplete)
-
-    MISSING=()
-    for p in "${APT_PKGS[@]}"; do
-        dpkg -s "$p" >/dev/null 2>&1 || MISSING+=("$p")
-    done
-
-    if [ ${#MISSING[@]} -gt 0 ]; then
-        say "Installing: ${MISSING[*]}"
-        sudo apt update
-        sudo apt install -y "${MISSING[@]}" || warn "some packages failed to install"
-    else
-        say "All base packages already present"
-    fi
+    apt_install zsh git curl wget bat sshpass xdg-utils nano python3-argcomplete
 
     # Ubuntu/Debian ship bat as `batcat`.
     if command -v batcat >/dev/null 2>&1 && ! command -v bat >/dev/null 2>&1; then
         mkdir -p "$HOME/.local/bin"
         ln -sf "$(command -v batcat)" "$HOME/.local/bin/bat"
-        say "Linked bat -> batcat in ~/.local/bin"
     fi
 
     # Register zsh as a valid login shell
     ZSH_BIN="$(command -v zsh)"
     if [ -n "$ZSH_BIN" ] && ! grep -qx "$ZSH_BIN" /etc/shells 2>/dev/null; then
+        sudo_init
         echo "$ZSH_BIN" | sudo tee -a /etc/shells >/dev/null
-        say "Registered $ZSH_BIN in /etc/shells"
     fi
 
     # ---------------------------- Oh My Zsh -----------------------------------
-    if [ ! -d "$HOME/.oh-my-zsh" ]; then
-        say "Installing Oh My Zsh"
+    install_omz() {
         sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" \
-        "" --unattended --keep-zshrc
-    else
-        say "Oh My Zsh already installed, skipping"
+            "" --unattended --keep-zshrc
+    }
+    if [ ! -d "$HOME/.oh-my-zsh" ]; then
+        run "Installing Oh My Zsh" install_omz
     fi
 
     # ------------------------- Plugins and Theme ------------------------------
     clone_if_missing() {
-        local repo="$1" dest="$2"
+        local name="$1" repo="$2" dest="$3"
         if [ ! -d "$dest" ]; then
-            say "Cloning $(basename "$dest")"
-            git clone --depth=1 "$repo" "$dest" || warn "failed to clone $repo"
-        else
-            say "$(basename "$dest") already present, skipping"
+            run "Installing $name" git clone --depth=1 "$repo" "$dest"
         fi
     }
 
     mkdir -p "$ZSH_CUSTOM/plugins" "$ZSH_CUSTOM/themes"
 
     # fzf-tab: the only non-builtin plugin the live .zshrc loads
-    clone_if_missing https://github.com/Aloxaf/fzf-tab "$ZSH_CUSTOM/plugins/fzf-tab"
+    clone_if_missing fzf-tab https://github.com/Aloxaf/fzf-tab "$ZSH_CUSTOM/plugins/fzf-tab"
 
     # Spaceship prompt
-    clone_if_missing https://github.com/spaceship-prompt/spaceship-prompt.git \
-    "$ZSH_CUSTOM/themes/spaceship-prompt"
+    clone_if_missing "Spaceship prompt" https://github.com/spaceship-prompt/spaceship-prompt.git \
+        "$ZSH_CUSTOM/themes/spaceship-prompt"
     if [ ! -e "$ZSH_CUSTOM/themes/spaceship.zsh-theme" ]; then
         ln -sf "$ZSH_CUSTOM/themes/spaceship-prompt/spaceship.zsh-theme" \
-        "$ZSH_CUSTOM/themes/spaceship.zsh-theme"
-        say "Linked spaceship.zsh-theme"
+            "$ZSH_CUSTOM/themes/spaceship.zsh-theme"
     fi
 
     # --------------------------------- fzf ------------------------------------
+    install_fzf() {
+        git clone --depth 1 https://github.com/junegunn/fzf.git "$HOME/.fzf"
+        "$HOME/.fzf/install" --all --no-fish
+    }
+    update_fzf() {
+        git -C "$HOME/.fzf" pull --ff-only
+        "$HOME/.fzf/install" --all --no-fish
+    }
     if [ ! -d "$HOME/.fzf" ]; then
-        say "Installing fzf from source"
-        git clone --depth 1 https://github.com/junegunn/fzf.git "$HOME/.fzf" \
-        && "$HOME/.fzf/install" --all --no-fish
+        run "Installing fzf" install_fzf
     else
-        say "fzf already installed -- updating"
-        git -C "$HOME/.fzf" pull --ff-only >/dev/null 2>&1 \
-        && "$HOME/.fzf/install" --all --no-fish >/dev/null 2>&1
+        run "Updating fzf" update_fzf
     fi
 fi
 
@@ -142,31 +126,33 @@ fi
 ZSHRC_SRC="$SCRIPT_DIR/zsh/.zshrc"
 
 if [ ! -f "$ZSHRC_SRC" ]; then
-    warn "zsh/.zshrc not found next to this script (looked in $ZSHRC_SRC)"
+    fail "zsh/.zshrc not found next to this script (looked in $ZSHRC_SRC)"
     exit 1
 fi
 
 if [ -f "$HOME/.zshrc" ] && cmp -s "$ZSHRC_SRC" "$HOME/.zshrc"; then
-    say ".zshrc already matches zsh/.zshrc, nothing copied"
+    ok "~/.zshrc up to date"
 else
     if [ -f "$HOME/.zshrc" ]; then
-        cp "$HOME/.zshrc" "$HOME/.zshrc.bak.$(date +%Y%m%d%H%M%S)"
-        say "Existing .zshrc backed up"
+        backup="$HOME/.zshrc.bak.$(date +%Y%m%d%H%M%S)"
+        cp "$HOME/.zshrc" "$backup"
+        ok "Updated ~/.zshrc, the old one is kept as ${backup/#$HOME/\~}"
+    else
+        ok "Installed ~/.zshrc"
     fi
     cp "$ZSHRC_SRC" "$HOME/.zshrc"
-    say "zsh/.zshrc copied to $HOME/.zshrc"
 fi
 
 git config --global core.pager 'less -FRX'
 
-if ! incremental; then
-    if [ "$SHELL" != "$ZSH_BIN" ]; then
-        say "Setting zsh as the default shell (may prompt for your password)"
-        chsh -s "$ZSH_BIN" || warn "chsh failed -- run 'chsh -s $ZSH_BIN' manually"
+if ! incremental && [ "$SHELL" != "$ZSH_BIN" ]; then
+    info "Setting zsh as the login shell"
+    if chsh -s "$ZSH_BIN"; then
+        ok "zsh is now the login shell"
     else
-        say "zsh is already the login shell"
+        warn "chsh failed, run 'chsh -s $ZSH_BIN' manually"
     fi
 fi
 
-echo
-echo "ZSH Setup is Complete"
+title "Done"
+info "Open a new terminal to start using zsh."

@@ -18,9 +18,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 CONFIG_SRC="${SCRIPT_DIR}/nvim"
 NVIM_CONFIG="${HOME}/.config/nvim"
 
-info() { printf '\n\033[1;34m==>\033[0m %s\n' "${1}"; }
-warn() { printf '\033[1;33m[warn]\033[0m %s\n' "${1}"; }
-skip() { printf '\033[1;32m[skip]\033[0m %s\n' "${1}"; }
+source "${SCRIPT_DIR}/lib/log.sh"
 
 usage() {
     cat <<'EOF'
@@ -57,7 +55,7 @@ CONFIG_CHANGED=0
 # -------------------------- dependency check ----------------------------------
 require() {
     command -v "${1}" >/dev/null 2>&1 || {
-        warn "missing '${1}', install it first"
+        fail "missing '${1}', installing the requirement"
         exit 1
     }
 }
@@ -65,16 +63,16 @@ require() {
 for cmd in git curl tar; do require "${cmd}"; done
 
 [[ -d "${CONFIG_SRC}/lua" ]] || {
-    warn "nvim/lua not found next to this script (looked in ${CONFIG_SRC})"
+    fail "nvim/lua not found next to this script (looked in ${CONFIG_SRC})"
     exit 1
 }
 
 machine="$(uname -m)"
 
 if incremental; then
-    info "Incremental:: skipping anything already in place"
+    title "Updating NEOVIM Setup"
 else
-    info "Full:: config, plugins, state and cache are rebuilt"
+    title "Full-FLedged NEOVIM Setup"
 fi
 
 # ----------------------------- add to .zshrc ----------------------------------
@@ -117,8 +115,6 @@ installed_nvim_version() {
 }
 
 install_neovim() {
-    require sudo
-
     local tarball="nvim-${nvim_arch}.tar.gz" url tmp
     if [[ "${NVIM_VERSION}" == "latest" ]]; then
         url="https://github.com/neovim/neovim/releases/latest/download/${tarball}"
@@ -127,57 +123,49 @@ install_neovim() {
     fi
 
     tmp="$(mktemp -d)"
-    curl -fL "${url}" -o "${tmp}/${tarball}"
+    curl -fsSL "${url}" -o "${tmp}/${tarball}"
     sudo rm -rf "${nvim_prefix}"
     sudo tar -C /opt -xzf "${tmp}/${tarball}"
     rm -rf "${tmp}"
 }
 
-info "Installing Neovim (${NVIM_VERSION})"
 nvim_have="$(installed_nvim_version || true)"
 nvim_want="$(wanted_nvim_version || true)"
 
 if incremental && [[ -n "${nvim_have}" ]]; then
     if [[ -z "${nvim_want}" ]]; then
-        skip "Neovim ${nvim_have} present, could not reach GitHub to check for a newer one"
-    elif [[ "${nvim_have}" == "${nvim_want}" ]]; then
-        skip "Neovim ${nvim_have} already installed in ${nvim_prefix}"
-    else
-        info "Neovim ${nvim_have} -> ${nvim_want}"
-        install_neovim
+        warn "Could not reach GitHub to check for a newer NEOVIM than ${nvim_have}"
+    elif [[ "${nvim_have}" != "${nvim_want}" ]]; then
+        sudo_init
+        run "Updating Neovim ${nvim_have} to ${nvim_want}" install_neovim
     fi
 else
-    install_neovim
+    sudo_init
+    run "Installing NEOVIM ${nvim_want:-${NVIM_VERSION}}" install_neovim
 fi
 
 export PATH="${PATH}:${nvim_prefix}/bin"
 # shellcheck disable=SC2016  # the literal, unexpanded text is what belongs in .zshrc
 persist_in_zshrc "export PATH=\"\$PATH:${nvim_prefix}/bin\""
 
-nvim --version | head -1
-
 # ------------------------------- NvChad ---------------------------------------
 
 nvchad_present() { [[ -f "${NVIM_CONFIG}/init.lua" && -d "${NVIM_CONFIG}/lua" ]]; }
 
 install_nvchad() {
-    if [[ -d "${NVIM_CONFIG}" ]]; then
-        local backup
-        backup="${NVIM_CONFIG}.bak.$(date +%Y%m%d%H%M%S)"
-        mv "${NVIM_CONFIG}" "${backup}"
-        info "Old config moved to ${backup}"
-    fi
     rm -rf "${HOME}/.local/share/nvim" "${HOME}/.local/state/nvim" "${HOME}/.cache/nvim"
     git clone --depth 1 https://github.com/NvChad/starter "${NVIM_CONFIG}"
     rm -rf "${NVIM_CONFIG}/.git"
 }
 
-info "Installing NvChad starter"
-if incremental && nvchad_present; then
-    skip "NvChad starter already at ${NVIM_CONFIG}, keeping plugins, state and cache"
-else
-    incremental && warn "no usable config at ${NVIM_CONFIG}, doing a fresh starter install"
-    install_nvchad
+if ! incremental || ! nvchad_present; then
+    incremental && warn "No usable config at ${NVIM_CONFIG}, doing a fresh starter install"
+    if [[ -d "${NVIM_CONFIG}" ]]; then
+        backup="${NVIM_CONFIG}.bak.$(date +%Y%m%d%H%M%S)"
+        mv "${NVIM_CONFIG}" "${backup}"
+        info "Old config moved to ${backup/#${HOME}/\~}"
+    fi
+    run "Installing NvChad starter" install_nvchad
 fi
 
 # ------------------------- tree-sitter CLI ------------------------------------
@@ -200,25 +188,24 @@ installed_ts_version() {
 }
 
 install_tree_sitter() {
-    require gunzip
     mkdir -p "${HOME}/.local/bin"
-    curl -fL "https://github.com/tree-sitter/tree-sitter/releases/download/${TS_VERSION}/tree-sitter-${ts_arch}.gz" -o /tmp/ts.gz
+    curl -fsSL "https://github.com/tree-sitter/tree-sitter/releases/download/${TS_VERSION}/tree-sitter-${ts_arch}.gz" -o /tmp/ts.gz
     gunzip -f /tmp/ts.gz
     chmod +x /tmp/ts
     mv /tmp/ts "${ts_bin}"
 }
 
-info "Installing tree-sitter CLI ${TS_VERSION}"
 ts_have="$(installed_ts_version || true)"
-if incremental && [[ "${ts_have}" == "${TS_VERSION#v}" ]]; then
-    skip "tree-sitter ${ts_have} already at ${ts_bin}"
-else
-    [[ -n "${ts_have}" ]] && info "tree-sitter ${ts_have} -> ${TS_VERSION#v}"
-    install_tree_sitter
+if ! incremental || [[ "${ts_have}" != "${TS_VERSION#v}" ]]; then
+    require gunzip
+    if [[ -n "${ts_have}" && "${ts_have}" != "${TS_VERSION#v}" ]]; then
+        run "Updating tree-sitter CLI ${ts_have} to ${TS_VERSION#v}" install_tree_sitter
+    else
+        run "Installing tree-sitter CLI ${TS_VERSION#v}" install_tree_sitter
+    fi
 fi
 
 # --------------------------------- PATH ---------------------------------------
-info "Ensuring ~/.local/bin is on PATH"
 export PATH="${HOME}/.local/bin:${PATH}"
 # shellcheck disable=SC2016
 persist_in_zshrc 'export PATH="$HOME/.local/bin:$PATH"'
@@ -238,22 +225,19 @@ font_installed() {
 
 install_font() {
     mkdir -p "${HOME}/.local/share/fonts"
-    curl -fL "https://github.com/ryanoasis/nerd-fonts/releases/latest/download/${FONT}.zip" -o "/tmp/${FONT}.zip"
+    curl -fsSL "https://github.com/ryanoasis/nerd-fonts/releases/latest/download/${FONT}.zip" -o "/tmp/${FONT}.zip"
     unzip -o "/tmp/${FONT}.zip" -d "${HOME}/.local/share/fonts" >/dev/null
     if command -v fc-cache >/dev/null 2>&1; then
         fc-cache -f >/dev/null
-    else
-        warn "fc-cache not found, font cache not refreshed"
     fi
 }
 
-info "Installing ${FONT} Nerd Font"
 if incremental && font_installed; then
-    skip "${FONT} Nerd Font already in ~/.local/share/fonts"
+    :
 elif command -v unzip >/dev/null 2>&1; then
-    install_font
+    run "Installing ${FONT} Nerd Font" install_font
 else
-    warn "unzip not found, skipping font install. Install unzip and re-run, or grab a Nerd Font from nerdfonts.com"
+    warn "unzip not found. Install unzip and re-run"
 fi
 
 # ------------------------- the Lua configuration ------------------------------
@@ -267,33 +251,30 @@ copy_config_changed() {
         fi
         mkdir -p "$(dirname "${dest}")"
         cp "${src}" "${dest}"
-        printf '    updated %s\n' "${rel}"
+        ok "Updated ${rel}"
         CONFIG_CHANGED=1
     done < <(find "${CONFIG_SRC}" -type f -print0)
 }
 
 if incremental; then
-    info "Syncing changed files from nvim/ into ${NVIM_CONFIG}"
     copy_config_changed
-    ((CONFIG_CHANGED)) || skip "config already matches nvim/, nothing copied"
+    ((CONFIG_CHANGED)) || ok "Config up to date"
 else
-    info "Copying nvim/lua/ over the starter's ${NVIM_CONFIG}/lua"
     cp -R "${CONFIG_SRC}/." "${NVIM_CONFIG}/"
+    ok "Config copied into ${NVIM_CONFIG/#${HOME}/\~}"
     CONFIG_CHANGED=1
 fi
 
-info "Installing luacheck"
 if command -v luacheck >/dev/null 2>&1; then
-    skip "luacheck already installed"
+    :
 elif command -v apt-get >/dev/null 2>&1; then
-    require sudo
-    sudo apt-get install -y lua-check
+    apt_install lua-check
 else
     warn "apt-get not found, install luacheck yourself (e.g. luarocks install luacheck)"
 fi
 
 for linter in shellcheck ruff clang-tidy luacheck; do
-    command -v "${linter}" >/dev/null 2>&1 || warn "linter '${linter}' not installed, it will be skipped until you add it"
+    command -v "${linter}" >/dev/null 2>&1 || warn "Linter '${linter}' not installed, it is skipped until you add it"
 done
 
 for tool in fzf rg; do
@@ -301,32 +282,21 @@ for tool in fzf rg; do
 done
 
 # ------------------------- bootstrap plugins ----------------------------------
-info "Bootstrapping plugins (headless)"
-nvim --headless -c 'lua require("lazy").install({ wait = true, show = false })' -c 'qa!' 2>/dev/null \
-    || warn "plugin bootstrap had issues, it will finish on first launch"
+try "Plugins finish installing on first launch" \
+    "Installing plugins" nvim --headless -c 'lua require("lazy").install({ wait = true, show = false })' -c 'qa!'
 
 # base46 compiles its highlights to a cache; chadrc changes need a rebuild.
 if ((CONFIG_CHANGED)); then
-    nvim --headless -c 'lua require("base46").load_all_highlights()' -c 'qa!' 2>/dev/null \
-        || warn "highlight cache not rebuilt, it will rebuild on first launch"
-else
-    skip "config unchanged, highlight cache left as is"
+    try "The highlight cache rebuilds on first launch" \
+        "Rebuilding highlight cache" nvim --headless -c 'lua require("base46").load_all_highlights()' -c 'qa!'
 fi
 
-info "Done."
+title "Done"
 if incremental; then
-    cat <<'EOF'
-
-Incremental run finished. Open a fresh terminal if the PATH lines were just added.
-
-EOF
+    info "Open a fresh terminal if the PATH lines were just added."
 else
-    cat <<'EOF'
-
-Next steps:
-  1. Set your terminal font to "JetBrainsMono Nerd Font" in its preferences.
-  2. Fully close and reopen the terminal so the font and PATH take effect.
-  3. Launch nvim and run:  :TSInstall cpp python lua elixir
-
-EOF
+    info "Next steps:"
+    info "  1. Set your terminal font to \"JetBrainsMono Nerd Font\" in its preferences."
+    info "  2. Fully close and reopen the terminal so the font and PATH take effect."
+    info "  3. Launch nvim and run:  :TSInstall cpp python lua elixir"
 fi

@@ -12,13 +12,12 @@
 #
 set -uo pipefail
 
-say()  { echo "--> $*"; }
-warn() { echo "!!! $*" >&2; }
-
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 CONFIG_SRC="$SCRIPT_DIR/vscode"
 USER_DIR="$HOME/.config/Code/User"
 STAMP="$(date +%Y%m%d%H%M%S)"
+
+source "$SCRIPT_DIR/lib/log.sh"
 
 usage() {
     cat <<'EOF'
@@ -51,23 +50,24 @@ done
 
 incremental() { [[ "$MODE" == "incremental" ]]; }
 
-echo "=== VS Code environment setup starting ==="
-
 if incremental; then
-    say "Incremental:: skipping installs, syncing vscode/ config only"
+    title "Updating VS Code Setup"
     command -v code >/dev/null 2>&1 \
         || warn "VS Code is not installed, run ./setup-code.sh without -i first"
+else
+    title "Full-Fledged VS Code Setup"
 fi
 
-if ! incremental; then
-    if ! command -v code >/dev/null 2>&1; then
-        say "VS Code not found -- installing from the Microsoft apt repo"
-        sudo apt update
-        sudo apt install -y wget gpg
-        wget -qO- https://packages.microsoft.com/keys/microsoft.asc \
-            | sudo gpg --dearmor --yes -o /usr/share/keyrings/microsoft.gpg
-        sudo rm -f /etc/apt/sources.list.d/vscode.list
-        sudo tee /etc/apt/sources.list.d/vscode.sources >/dev/null <<'EOF'
+# Microsoft apt repo, as in https://code.visualstudio.com/docs/setup/linux
+install_vscode() {
+    sudo apt-get update
+    sudo apt-get install -y wget gpg
+    wget -qO- https://packages.microsoft.com/keys/microsoft.asc \
+        | sudo gpg --dearmor --yes -o /usr/share/keyrings/microsoft.gpg
+    # An older one-line vscode.list with a different Signed-By makes apt
+    # refuse to update, so it is replaced by the deb822 vscode.sources.
+    sudo rm -f /etc/apt/sources.list.d/vscode.list
+    sudo tee /etc/apt/sources.list.d/vscode.sources >/dev/null <<'EOF'
 Types: deb
 URIs: https://packages.microsoft.com/repos/code
 Suites: stable
@@ -75,13 +75,17 @@ Components: main
 Architectures: amd64,arm64,armhf
 Signed-By: /usr/share/keyrings/microsoft.gpg
 EOF
-        sudo apt update
-        sudo apt install -y code
-    else
-        say "VS Code already installed: $(command -v code)"
+    sudo apt-get update
+    sudo apt-get install -y code
+}
+
+if ! incremental; then
+    if ! command -v code >/dev/null 2>&1; then
+        sudo_init
+        run "Installing VS Code" install_vscode
     fi
 
-    command -v code >/dev/null 2>&1 || { warn "code still not on PATH -- aborting"; exit 1; }
+    command -v code >/dev/null 2>&1 || { fail "code is not on PATH, stopping"; exit 1; }
 
 # ------------------------------- Extensions -----------------------------------
 EXTENSIONS=(
@@ -121,36 +125,21 @@ EXTENSIONS=(
     vue.volar
 )
 
-    say "Installing ${#EXTENSIONS[@]} extensions (already-present ones are skipped)"
-
     INSTALLED="$(code --list-extensions 2>/dev/null | tr '[:upper:]' '[:lower:]')"
-    FAILED=()
 
     for ext in "${EXTENSIONS[@]}"; do
-        if echo "$INSTALLED" | grep -qx "$(echo "$ext" | tr '[:upper:]' '[:lower:]')"; then
-            echo "    = $ext (already installed)"
-            continue
-        fi
-        echo "    + $ext"
-        code --install-extension "$ext" --force >/dev/null 2>&1 || FAILED+=("$ext")
+        grep -qx "${ext,,}" <<<"$INSTALLED" && continue
+        run "Installing $ext" code --install-extension "$ext" --force
     done
-
-    if [ ${#FAILED[@]} -gt 0 ]; then
-        warn "These extensions failed to install (marketplace availability may differ):"
-        for f in "${FAILED[@]}"; do echo "      $f"; done
-    else
-        say "All extensions installed"
-    fi
 fi
 
 # ----------------------------- User config ------------------------------------
     mkdir -p "$USER_DIR"
 
     backup() {
-        [ -f "$1" ] && cp "$1" "$1.bak.$STAMP" && say "Backed up $(basename "$1")"
+        [ -f "$1" ] && cp "$1" "$1.bak.$STAMP"
     }
     RENDERED="$(mktemp)"
-    trap 'rm -f "$RENDERED"' EXIT
     CONFIG_CHANGED=0
     for f in settings.json keybindings.json argv.json; do
         [ -f "$CONFIG_SRC/$f" ] || { warn "vscode/$f not found next to this script"; continue; }
@@ -160,10 +149,11 @@ fi
         fi
         backup "$USER_DIR/$f"
         cp "$RENDERED" "$USER_DIR/$f"
-        say "$f copied"
+        ok "Updated $f"
         CONFIG_CHANGED=1
     done
-    [ "$CONFIG_CHANGED" -eq 1 ] || say "config already matches vscode/, nothing copied"
+    rm -f "$RENDERED"
+    [ "$CONFIG_CHANGED" -eq 1 ] || ok "Config up to date"
 
     mkdir -p "$USER_DIR/snippets"
 
@@ -171,27 +161,20 @@ if ! incremental; then
 
 # -------------------------------- Formatter ----------------------------------
 
-    if command -v pip3 >/dev/null 2>&1; then
-        say "Installing clang-format, black and ruff into ~/.local/bin"
-        pip3 install --user --upgrade clang-format black ruff \
-            || warn "pip install failed -- install clang-format/black/ruff by hand"
-    else
-        warn "pip3 not found -- skipping. Install python3-pip, then:"
-        warn "    pip3 install --user clang-format black ruff"
-    fi
-
+    # settings.json points clang-format, black and ruff at ~/.local/bin
+    MISSING_TOOLS=()
     for t in clang-format black ruff; do
-        if [ -x "$HOME/.local/bin/$t" ]; then
-            echo "    ok  $HOME/.local/bin/$t"
-        else
-            warn "missing: $HOME/.local/bin/$t (settings.json expects it here)"
-        fi
+        [ -x "$HOME/.local/bin/$t" ] || MISSING_TOOLS+=("$t")
     done
+
+    if ((${#MISSING_TOOLS[@]})); then
+        if command -v pip3 >/dev/null 2>&1; then
+            run "Installing ${MISSING_TOOLS[*]}" pip3 install --user --upgrade "${MISSING_TOOLS[@]}"
+        else
+            warn "pip3 not found, install python3-pip, then: pip3 install --user ${MISSING_TOOLS[*]}"
+        fi
+    fi
 fi
 
-echo
-echo "Restart VS Code to pick up the new extensions and settings."
-if ! incremental; then
-    echo
-    echo " Installation is complete."
-fi
+title "Done"
+info "Restart VS Code to pick up the new extensions and settings."
