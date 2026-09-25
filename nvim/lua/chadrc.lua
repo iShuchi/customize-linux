@@ -15,17 +15,27 @@ M.base46 = {
 	},
 
 	hl_add = {
-		VirtColumn = { fg = "grey" }, -- VS Code #80808075 -> espresso #424242
-		MarkdownRuler = { fg = "#ff9900" }, -- "[markdown]".editor.rulers[0].color
+		-- Colour names below come from the selected theme's palette
+		VirtColumn = { fg = "grey" },
+		MarkdownRuler = { fg = "orange" },
+
+		-- Git graph, instead of the plugin's own dull gruvbox colours
+		GitGraphHash = { fg = "purple" },
+		GitGraphTimestamp = { fg = "green" },
+		GitGraphAuthor = { fg = "blue" },
+		GitGraphBranchName = { fg = "orange" },
+		GitGraphBranchTag = { fg = "sun" },
+		GitGraphBranchMsg = { fg = "white" },
+		GitGraphBranch1 = { fg = "blue" },
+		GitGraphBranch2 = { fg = "purple" },
+		GitGraphBranch3 = { fg = "sun" },
+		GitGraphBranch4 = { fg = "green" },
+		GitGraphBranch5 = { fg = "orange" },
 	},
 }
 
 M.ui = {
 	tabufline = {
-		-- NvChad truncates each tab label to (bufwidth - 7) characters, so the
-		-- default 21 cuts names at 14 -- "simulation.lau..". 32 shows 25, which
-		-- covers normal source filenames. Wider tabs means fewer fit on screen
-		-- before NvChad starts hiding them, so this is the trade-off dial.
 		bufwidth = 32,
 	},
 }
