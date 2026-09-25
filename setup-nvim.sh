@@ -1,10 +1,10 @@
-#!/usr/bin/env zsh
+#!/usr/bin/env bash
 
 # Installs Neovim, the NvChad starter, and the Lua configuration kept in the
 # nvim/ folder next to this script.
 #
-#   ./setup-nvim.zsh                full reinstall (the default)
-#   ./setup-nvim.zsh -i				only what is missing or has changed
+#   ./setup-nvim.sh                 full reinstall (the default)
+#   ./setup-nvim.sh -i              only what is missing or has changed
 #
 # After a full run, set your terminal font to "JetBrainsMono Nerd Font",
 # open a fresh terminal, launch nvim, then run :TSInstall cpp python lua elixir
@@ -14,7 +14,7 @@ set -euo pipefail
 NVIM_VERSION="latest" # a tag such as v0.11.2 pins a specific release
 TS_VERSION="v0.24.7"  # last tree-sitter release before the glibc 2.39 bump
 FONT="JetBrainsMono"
-SCRIPT_DIR="${0:A:h}"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 CONFIG_SRC="${SCRIPT_DIR}/nvim"
 NVIM_CONFIG="${HOME}/.config/nvim"
 
@@ -24,7 +24,7 @@ skip() { printf '\033[1;32m[skip]\033[0m %s\n' "${1}"; }
 
 usage() {
     cat <<'EOF'
-usage: setup-nvim.zsh [--incremental | --full]
+usage: setup-nvim.sh [--incremental | --full]
 
   --full, -f          wipe and reinstall everything (default)
   --inc, -i           install only what is missing
@@ -111,9 +111,9 @@ installed_nvim_version() {
     [[ -x "${nvim_prefix}/bin/nvim" ]] || return 1
     local out
     out="$("${nvim_prefix}/bin/nvim" --version 2>/dev/null)" || return 1
-    # first line only, then its second field: "NVIM v0.12.5" -> v0.12.5
-    out="${out%%$'\n'*}"
-    printf '%s' "${${out#* }%% *}"
+    # second word of the first line: "NVIM v0.12.5" -> v0.12.5
+    read -r _ out _ <<<"${out}"
+    printf '%s' "${out}"
 }
 
 install_neovim() {
@@ -162,7 +162,8 @@ nvchad_present() { [[ -f "${NVIM_CONFIG}/init.lua" && -d "${NVIM_CONFIG}/lua" ]]
 
 install_nvchad() {
     if [[ -d "${NVIM_CONFIG}" ]]; then
-        local backup="${NVIM_CONFIG}.bak.$(date +%Y%m%d%H%M%S)"
+        local backup
+        backup="${NVIM_CONFIG}.bak.$(date +%Y%m%d%H%M%S)"
         mv "${NVIM_CONFIG}" "${backup}"
         info "Old config moved to ${backup}"
     fi
@@ -194,7 +195,8 @@ installed_ts_version() {
     [[ -x "${ts_bin}" ]] || return 1
     local out
     out="$("${ts_bin}" --version 2>/dev/null)" || return 1
-    printf '%s' "${${out#* }%% *}"
+    read -r _ out _ <<<"${out}"
+    printf '%s' "${out}"
 }
 
 install_tree_sitter() {
@@ -218,6 +220,7 @@ fi
 # --------------------------------- PATH ---------------------------------------
 info "Ensuring ~/.local/bin is on PATH"
 export PATH="${HOME}/.local/bin:${PATH}"
+# shellcheck disable=SC2016
 persist_in_zshrc 'export PATH="$HOME/.local/bin:$PATH"'
 
 # ---------- verify the binary actually runs on this glibc ---------------------
@@ -230,9 +233,7 @@ fi
 
 # ------------------------------- Nerd Font ------------------------------------
 font_installed() {
-    local -a found
-    found=("${HOME}/.local/share/fonts"/**/${FONT}*.(ttf|otf)(N))
-    ((${#found}))
+    [[ -n "$(find "${HOME}/.local/share/fonts" -name "${FONT}*.[ot]tf" -print -quit 2>/dev/null)" ]]
 }
 
 install_font() {
@@ -258,18 +259,17 @@ fi
 # ------------------------- the Lua configuration ------------------------------
 copy_config_changed() {
     local src rel dest
-    for src in "${CONFIG_SRC}"/**/*(.DN); do
-        rel="${src#${CONFIG_SRC}/}"
-        [[ "${rel}" == .git/* ]] && continue
+    while IFS= read -r -d '' src; do
+        rel="${src#"${CONFIG_SRC}"/}"
         dest="${NVIM_CONFIG}/${rel}"
         if [[ -f "${dest}" ]] && cmp -s "${src}" "${dest}"; then
             continue
         fi
-        mkdir -p "${dest:h}"
+        mkdir -p "$(dirname "${dest}")"
         cp "${src}" "${dest}"
         printf '    updated %s\n' "${rel}"
         CONFIG_CHANGED=1
-    done
+    done < <(find "${CONFIG_SRC}" -type f -print0)
 }
 
 if incremental; then

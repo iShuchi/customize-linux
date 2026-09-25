@@ -8,28 +8,13 @@ local M = {}
 M.base46 = {
 	theme = "espresso",
 
-	-- hl_override = {
-	-- 	Comment = { italic = true },
-	-- 	["@comment"] = { italic = true },
-	-- },
-
-	-- nvim-tree keeps base46's own espresso colours: blue folders, per-filetype
-	-- devicons, yellow special files. The two overrides below are NOT colour
-	-- changes -- they fix things that are effectively invisible on this theme.
+	-- Make the tree's indent guides and selected line visible
 	hl_override = {
 		NvimTreeIndentMarker = { fg = { "line", 8 } },
-
 		NvimTreeCursorLine = { bg = "black2" },
 	},
 
 	hl_add = {
-		-- NVIM block banner, one group per letter. All four are espresso's own
-		-- base_30 names, so the banner re-colours itself if the theme changes.
-		-- Ordered green -> blue -> purple, echoing Neovim's own logo gradient.
-		NvimLogo1 = { fg = "green" }, -- N  #7dc5a2
-		NvimLogo2 = { fg = "teal" }, -- V  #51decf
-		NvimLogo3 = { fg = "blue" }, -- I  #76bef9
-		NvimLogo4 = { fg = "purple" }, -- M  #c993ef
 		VirtColumn = { fg = "grey" }, -- VS Code #80808075 -> espresso #424242
 		MarkdownRuler = { fg = "#ff9900" }, -- "[markdown]".editor.rulers[0].color
 	},

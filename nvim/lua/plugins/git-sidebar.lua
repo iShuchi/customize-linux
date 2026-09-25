@@ -1,4 +1,4 @@
--- Left sidebar includes NVIM logo, file tree and commit graph
+-- Left sidebar with the file tree and commit graph
 
 local sidebar = require "configs.sidebar"
 
@@ -25,7 +25,6 @@ return {
       vim.opt.laststatus = 3
       vim.opt.splitkeep = "screen"
       sidebar.track_drags()
-      sidebar.track_logo()
       sidebar.autostart()
       sidebar.track_graph_top()
       sidebar.track_graph_keys()
@@ -40,14 +39,6 @@ return {
       wo = { signcolumn = "no" },
       options = { left = { size = sidebar.width } },
       left = {
-        {
-          ft = sidebar.LOGO_FT,
-          title = "",
-          size = { height = sidebar.logo_height },
-          pinned = true,
-          open = sidebar.open_logo,
-          wo = { winbar = "", cursorline = false, number = false, relativenumber = false, wrap = false },
-        },
         {
           ft = "NvimTree",
           title = "Explorer",

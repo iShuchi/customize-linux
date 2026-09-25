@@ -17,15 +17,15 @@ for programming without touching your mouse.
 
 ### 1. Setup
 
-Say, I wanna setup NEOVIM on a new device, so I would run `./setup-nvim.zsh`
+Say, I wanna setup NEOVIM on a new device, so I would run `./setup-nvim.sh`
 in terminal, sit and relax!
 
 Each setup script takes a mode:
 
 | Command | Utility |
 | --- | --- |
-| `./setup-nvim.zsh` | For a new device or a broken install to full installation. |
-| `./setup-nvim.zsh -i` | Updates only what is missing or changed. |
+| `./setup-nvim.sh` | For a new device or a broken install to full installation. |
+| `./setup-nvim.sh -i` | Updates only what is missing or changed. |
 
 ### 1. Keybindings
 
