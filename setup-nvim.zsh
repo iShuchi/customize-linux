@@ -282,6 +282,16 @@ else
     CONFIG_CHANGED=1
 fi
 
+info "Installing luacheck"
+if command -v luacheck >/dev/null 2>&1; then
+    skip "luacheck already installed"
+elif command -v apt-get >/dev/null 2>&1; then
+    require sudo
+    sudo apt-get install -y lua-check
+else
+    warn "apt-get not found, install luacheck yourself (e.g. luarocks install luacheck)"
+fi
+
 for linter in shellcheck ruff clang-tidy luacheck; do
     command -v "${linter}" >/dev/null 2>&1 || warn "linter '${linter}' not installed, it will be skipped until you add it"
 done
@@ -307,8 +317,7 @@ info "Done."
 if incremental; then
     cat <<'EOF'
 
-Incremental run finished. Plugins, Mason servers, tree-sitter parsers and shada
-were left untouched. Open a fresh terminal if the PATH lines were just added.
+Incremental run finished. Open a fresh terminal if the PATH lines were just added.
 
 EOF
 else

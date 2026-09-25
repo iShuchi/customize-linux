@@ -21,7 +21,10 @@ function M.lint()
 end
 
 function M.setup()
-  require("lint").linters_by_ft = M.linters_by_ft
+  local lint = require "lint"
+  lint.linters_by_ft = M.linters_by_ft
+  table.insert(lint.linters.luacheck.args, 1, "--globals")
+  table.insert(lint.linters.luacheck.args, 2, "vim")
 
   vim.api.nvim_create_autocmd({ "BufReadPost", "BufWritePost", "InsertLeave" }, {
     group = vim.api.nvim_create_augroup("UserLint", { clear = true }),
