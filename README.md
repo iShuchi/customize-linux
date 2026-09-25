@@ -4,6 +4,12 @@ A virtual home which always makes me comfortable to code. There are different
 shell scripts around here and each is responsible for installing packages and
 completing a setup.
 
+## Setup
+
+To setup given any of the utility, simply run `./setup-<name>.sh` and if the
+utility is already installed, then one can use `./setup-<name>.sh -i` to copy
+paste the configuration inside `~/.config/<utility>`.
+
 ## NEOVIM
 
 Being a strong command line-based editor, NVIM creates comfortable environment
@@ -21,7 +27,7 @@ Each setup script takes a mode:
 | `./setup-nvim.zsh` | For a new device or a broken install to full installation. |
 | `./setup-nvim.zsh -i` | Updates only what is missing or changed. |
 
-### 2. Keybindings
+### 1. Keybindings
 
 `<leader>` is `Space`. Keys marked *NvChad* are NvChad defaults kept as they are.
 
@@ -54,7 +60,7 @@ Each setup script takes a mode:
   <tr><td><code>Shift+Left</code> / <code>Shift+Right</code></td><td>Scroll the git graph sideways</td></tr>
 </table>
 
-### 3. Display
+### 2. Display
 
 Here is how it looks so far :-)
 
@@ -62,10 +68,5 @@ Here is how it looks so far :-)
 
 ## TERMINATOR
 
-A terminal with splits, opening in the Bright Lights theme. The config and the
-TerminatorThemes plugin live in `config-term/`.
-
-| Command | Utility |
-| --- | --- |
-| `./setup-term.sh` | Installs Terminator, pip, requests and the themes plugin, then copies the config. |
-| `./setup-term.sh -i` | Copies only changed files from `config-term/` into `~/.config/terminator`. |
+A terminal with the Bright Lights theme is installed under this setup. The
+config and the TerminatorThemes plugin live in `terminator/`.
