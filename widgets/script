@@ -1,0 +1,42 @@
+#!/bin/bash
+# Desktop widgets launcher.
+#
+# WHY THIS RESTARTS THINGS:
+#   conky reads Xft.dpi once, at startup.  GNOME changes Xft.dpi whenever the
+#   display layout changes (96 * monitor-scale * text-scaling-factor), so a
+#   conky that was started before you plugged in the 4K monitor keeps drawing
+#   at the OLD scale into a framebuffer that is now 2x bigger -- which is what
+#   made the widgets shrink and wander off screen.
+#   So: restart conky on every monitor change.  The watcher below does that.
+
+DIR="$(cd "$(dirname "$0")" && pwd)"
+LOCK=/tmp/.conky-widgets-watcher.lock
+
+start_conky() {
+    pkill -x conky
+    sleep 1
+    setsid conky -c "$DIR/conkyrc_time" >/dev/null 2>&1 </dev/null &
+    setsid conky -c "$DIR/Hermoso_Rc"  >/dev/null 2>&1 </dev/null &
+}
+
+# Internal: re-run start_conky a few seconds after each MonitorsChanged signal.
+if [ "$1" = "--watch" ]; then
+    exec 9>"$LOCK"
+    flock -n 9 || exit 0          # a watcher is already running
+    gdbus monitor --session \
+          --dest org.gnome.Mutter.DisplayConfig \
+          --object-path /org/gnome/Mutter/DisplayConfig 2>/dev/null |
+    while read -r line; do
+        case "$line" in
+            *MonitorsChanged*)
+                sleep 4           # let GNOME settle the new scale / Xft.dpi
+                start_conky
+                ;;
+        esac
+    done
+    exit 0
+fi
+
+setsid "$0" --watch >/dev/null 2>&1 </dev/null &
+start_conky
+exit 0

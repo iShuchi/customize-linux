@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Exec=__HOME__/Documents/widget/script
+Hidden=false
+NoDisplay=false
+X-GNOME-Autostart-enabled=true
+Name[en_IN]=widget
+Name=widget
+Comment[en_IN]=
+Comment=

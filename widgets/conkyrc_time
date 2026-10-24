@@ -1,0 +1,67 @@
+# Conky settings #
+#
+# NOTE ON SIZING (GNOME + fractional scaling, X11):
+#   conky multiplies EVERY dimension it reads -- gap_x/gap_y, offset/voffset,
+#   minimum_size, border margins and "size=" fonts -- by Xft.dpi/96.
+#   GNOME sets Xft.dpi = 96 * monitor-scale * text-scaling-factor (here 1.1),
+#   so the monitor-scale part cancels out on its own and the ONLY correction
+#   needed is to divide the original 1080p design values by the
+#   text-scaling-factor (1.1).  Every number below is "original / 1.1".
+#   "pixelsize=" is NOT scaled by conky, so this file uses "size=" throughout.
+#   If you change org.gnome.desktop.interface text-scaling-factor, rescale.
+#
+background no
+update_interval 30
+double_buffer yes
+no_buffers yes
+
+# Window specifications #
+own_window yes
+own_window_type normal
+own_window_hints undecorated,below,sticky,skip_taskbar,skip_pager
+own_window_title 
+own_window_colour 000000
+own_window_argb_visual yes
+own_window_argb_value 0
+
+minimum_size 0 0
+
+# Alignment #
+# xinerama_head 0 = built-in eDP panel, 1 = external HDMI monitor.
+# Change this one line to move the widget to the other screen.
+xinerama_head 0
+alignment top_right
+gap_x 1136
+gap_y 227
+
+border_inner_margin 14
+border_outer_margin 0
+
+# Graphics settings #
+draw_shades no
+draw_outline no
+draw_borders no
+draw_graph_borders no
+
+# Text settings #
+use_xft yes
+xftalpha 0
+xftfont JosefinSans-Regular:size=14
+
+# Color scheme #
+default_color ffffff
+
+color1 e03f3f
+color2 9933CC
+color3 669900
+color4 FF8800
+color5 CC0000
+color6 AAAAAA
+color7 DDDDDD
+
+own_window_transparent yes
+TEXT
+${voffset -7}${offset 42}${font JosefinSans-Regular:size=54}${time %I:%M}${font JosefinSans-Regular:size=10}${time %P}$font
+
+${alignc}${time %A} $font${color1}${time %d}$color ${time  %B} ${time %Y}$font
+${voffset -44}
