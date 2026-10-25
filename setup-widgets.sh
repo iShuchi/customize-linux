@@ -5,12 +5,12 @@
 # Puts the desktop back the way it is here: the conky clock/date and day-name
 # widgets on the built-in display, started at login and restarted on every
 # monitor change, plus the Dash to Panel bottom dock on every monitor. All of
-# it is kept in widgets/:
+# it is kept in home/:
 
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-CONFIG_SRC="${SCRIPT_DIR}/widgets"
+CONFIG_SRC="${SCRIPT_DIR}/home"
 WIDGET_DIR="${HOME}/Documents/widget"
 AUTOSTART_DIR="${HOME}/.config/autostart"
 FONT_DIR="${HOME}/.local/share/fonts"
@@ -25,7 +25,7 @@ usage() {
 usage: setup-widgets.sh [--inc | --full]
 
   --full, -f          install conky and Dash to Panel, then copy the config (default)
-  --inc, -i           only copy changed files from widgets/ and reload the widgets
+  --inc, -i           only copy changed files from home/ and reload the widgets
   --help, -h          this message
 EOF
 }
@@ -52,7 +52,7 @@ done
 incremental() { [[ "${MODE}" == "incremental" ]]; }
 
 [[ -d "${CONFIG_SRC}" ]] || {
-    fail "widgets/ not found next to this script (looked in ${CONFIG_SRC})"
+    fail "home/ not found next to this script (looked in ${CONFIG_SRC})"
     exit 1
 }
 
@@ -149,11 +149,6 @@ elif ! cmp -s <(dconf dump "${D2P_PATH}" | grep -v '^available-monitors=') \
 fi
 
 ((CONFIG_CHANGED)) || ok "Config up to date"
-
-# ------------------------------ sanity checks ---------------------------------
-SCALE="$(gsettings get org.gnome.desktop.interface text-scaling-factor 2>/dev/null || echo unknown)"
-[[ "${SCALE}" == "1.1" || "${SCALE}" == "1.1000000000000001" ]] \
-    || warn "text-scaling-factor is ${SCALE}, the widget sizes are tuned for 1.1"
 
 # Restarts conky and its monitor watcher so the new config shows up now. The
 # watcher runs in its own session, so killing that whole group also stops its

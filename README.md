@@ -48,7 +48,7 @@ and the formatters that the settings point at. The settings, keybindings and
 Conky widgets on the built-in display (clock with date, and the day name) and
 the Dash to Panel bottom dock on every monitor. The conky configs, their
 launcher, its autostart entry, the Josefin Sans font and the Dash to Panel
-settings live in `widgets/`. The launcher restarts conky whenever a monitor is
+settings live in `home/`. The launcher restarts conky whenever a monitor is
 plugged in or removed, so the widgets keep their size and place under
 fractional scaling. It also turns the amdgpu TearFree option on for every
 monitor, since the scaled built-in display forces a software cursor that

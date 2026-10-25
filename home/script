@@ -15,9 +15,52 @@
 #   output, so the cursor flickered on the HDMI monitor.  Force TearFree on for
 #   every connected output; xrandr settings reset on each hotplug, so the
 #   watcher re-applies it too.
+#
+# CLOCK SIZE AND PLACE:
+#   conkyrc_time is a template.  Every size and margin in it is a ratio of the
+#   screen the clock sits on, taken from the look tuned on the 3840x2160 eDP
+#   panel, and is worked out again each time conky starts, so the clock scales
+#   and shifts with the screen.  Gaps are ratios of the screen width/height,
+#   fonts and vertical offsets are ratios of its height.
 
 DIR="$(cd "$(dirname "$0")" && pwd)"
 LOCK=/tmp/.conky-widgets-watcher.lock
+CLOCK_CONF="${XDG_RUNTIME_DIR:-/tmp}/conkyrc_time"
+
+CLOCK_HEAD=0                 # xinerama head: 0 = built-in eDP, 1 = HDMI
+CLOCK_GAP_X=0.10446          # left edge,  of screen width
+CLOCK_GAP_Y=0.18418          # top edge,   of screen height
+CLOCK_MARGIN=0.01425         # border,     of screen height
+CLOCK_TIME_SIZE=0.10990      # hh:mm font, of screen height
+CLOCK_PM_SIZE=0.02035        # am/pm font, of screen height
+CLOCK_DATE_SIZE=0.02239      # date font,  of screen height
+CLOCK_VOFF_TOP=-0.01425      # pulls the time up,          of screen height
+CLOCK_VOFF_END=-0.04477      # trims space under the date, of screen height
+
+# Fills conkyrc_time in for the current size of head CLOCK_HEAD, in the units
+# conky works in (screen pixels * 96 / Xft.dpi).
+render_clock() {
+    local dpi size
+    dpi="$(xrdb -query | awk '/^Xft.dpi:/ {print $2}')"
+    size="$(xrandr --listmonitors | awk -v head="$CLOCK_HEAD:" \
+        '$1 == head {split($3, a, "[/x]"); print a[1], a[3]}')"
+    [ -n "$size" ] || size="$(xrandr --listmonitors | awk 'NR == 2 {split($3, a, "[/x]"); print a[1], a[3]}')"
+    set -- $size
+    awk -v w="$1" -v h="$2" -v dpi="${dpi:-96}" -v head="$CLOCK_HEAD" \
+        -v gx="$CLOCK_GAP_X" -v gy="$CLOCK_GAP_Y" -v mg="$CLOCK_MARGIN" \
+        -v ts="$CLOCK_TIME_SIZE" -v ps="$CLOCK_PM_SIZE" -v ds="$CLOCK_DATE_SIZE" \
+        -v vt="$CLOCK_VOFF_TOP" -v ve="$CLOCK_VOFF_END" '
+        function r(x) { return sprintf("%d", x < 0 ? x - 0.5 : x + 0.5) }
+        BEGIN { W = w * 96 / dpi; H = h * 96 / dpi
+                v["HEAD"] = head
+                v["GAP_X"] = r(gx * W); v["GAP_Y"] = r(gy * H)
+                v["MARGIN"] = r(mg * H)
+                v["TIME_SIZE"] = r(ts * H); v["PM_SIZE"] = r(ps * H)
+                v["DATE_SIZE"] = r(ds * H)
+                v["VOFF_TOP"] = r(vt * H); v["VOFF_END"] = r(ve * H) }
+        { for (k in v) gsub("__" k "__", v[k]); print }' \
+        "$DIR/conkyrc_time" >"$CLOCK_CONF"
+}
 
 set_tearfree() {
     xrandr | awk '/ connected/ {print $1}' | while read -r out; do
@@ -28,8 +71,8 @@ set_tearfree() {
 start_conky() {
     pkill -x conky
     sleep 1
-    setsid conky -c "$DIR/conkyrc_time" >/dev/null 2>&1 </dev/null &
-    setsid conky -c "$DIR/Hermoso_Rc"  >/dev/null 2>&1 </dev/null &
+    render_clock
+    setsid conky -c "$CLOCK_CONF" >/dev/null 2>&1 </dev/null &
 }
 
 # Internal: re-run start_conky a few seconds after each MonitorsChanged signal.
