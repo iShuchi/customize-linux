@@ -79,8 +79,9 @@ install_dash_to_panel() {
 }
 
 if ! incremental; then
-    # libglib2.0-bin gives gdbus, which the widget watcher listens with
-    apt_install conky-all libglib2.0-bin wget python3
+    # libglib2.0-bin gives gdbus, which the widget watcher listens with, and
+    # x11-xserver-utils gives xrandr, which it turns TearFree on with
+    apt_install conky-all libglib2.0-bin x11-xserver-utils wget python3
     if ! gnome-extensions info "${D2P_UUID}" >/dev/null 2>&1; then
         try "Install Dash to Panel from https://extensions.gnome.org/extension/1160/dash-to-panel/" \
             "Installing Dash to Panel" install_dash_to_panel

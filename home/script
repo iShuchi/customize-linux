@@ -8,9 +8,22 @@
 #   at the OLD scale into a framebuffer that is now 2x bigger -- which is what
 #   made the widgets shrink and wander off screen.
 #   So: restart conky on every monitor change.  The watcher below does that.
+#
+# CURSOR FLICKER:
+#   The eDP panel is scaled with an X transform, which forces a software cursor
+#   on the whole screen.  amdgpu's TearFree "auto" only covers the transformed
+#   output, so the cursor flickered on the HDMI monitor.  Force TearFree on for
+#   every connected output; xrandr settings reset on each hotplug, so the
+#   watcher re-applies it too.
 
 DIR="$(cd "$(dirname "$0")" && pwd)"
 LOCK=/tmp/.conky-widgets-watcher.lock
+
+set_tearfree() {
+    xrandr | awk '/ connected/ {print $1}' | while read -r out; do
+        xrandr --output "$out" --set TearFree on 2>/dev/null
+    done
+}
 
 start_conky() {
     pkill -x conky
@@ -25,11 +38,12 @@ if [ "$1" = "--watch" ]; then
     flock -n 9 || exit 0          # a watcher is already running
     gdbus monitor --session \
           --dest org.gnome.Mutter.DisplayConfig \
-          --object-path /org/gnome/Mutter/DisplayConfig 2>/dev/null |
+          --object-path /org/gnome/Mutter/DisplayConfig 2>/dev/null 9>&- |
     while read -r line; do
         case "$line" in
             *MonitorsChanged*)
                 sleep 4           # let GNOME settle the new scale / Xft.dpi
+                set_tearfree
                 start_conky
                 ;;
         esac
@@ -38,5 +52,6 @@ if [ "$1" = "--watch" ]; then
 fi
 
 setsid "$0" --watch >/dev/null 2>&1 </dev/null &
+set_tearfree
 start_conky
 exit 0
